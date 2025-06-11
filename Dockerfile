@@ -36,7 +36,7 @@ if [ -z "$GEMINI_API_KEY" ]; then\n\
 fi\n\
 \n\
 # Start the ADK web server\n\
-adk web --port $PORT\n\
+adk web --host 0.0.0.0 --port $PORT\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
 # Start the application
