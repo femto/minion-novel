@@ -12,7 +12,6 @@ from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
 from typing import Optional, Dict, Any
-import google.generativeai as genai
 
 # Load environment variables
 load_dotenv()
@@ -32,19 +31,7 @@ def create_llm():
         api_version=os.getenv("AZURE_API_VERSION")
     )
 
-def call_llm_for_writing(prompt: str) -> str:
-    """Helper function to call LLM for actual content generation."""
-    try:
-        # Configure Gemini
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-2.0-flash-exp")
-        
-        # Generate content
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        print(f"Error calling LLM: {e}")
-        return f"[LLM Error: Could not generate content. {str(e)}]"
+# No longer needed - agents generate content directly
 
 # Novel Writing Tools
 def create_outline(genre: str, theme: str, target_length: str, tool_context: ToolContext) -> dict:
@@ -112,82 +99,7 @@ def create_character_profile(character_name: str, character_role: str, tool_cont
     
     return {"status": "success", "profile": profile}
 
-def write_chapter(chapter_number: int, chapter_focus: str, tool_context: ToolContext) -> dict:
-    """Writes a chapter based on outline and character profiles."""
-    print(f"--- Tool: write_chapter called for chapter {chapter_number}: {chapter_focus} ---")
-    
-    # Get context from state
-    outline = tool_context.state.get("novel_outline", {})
-    characters = tool_context.state.get("character_profiles", {})
-    genre = tool_context.state.get("novel_genre", "general")
-    theme = tool_context.state.get("novel_theme", "adventure")
-    
-    # Determine which act this chapter belongs to based on outline
-    estimated_chapters = outline.get("estimated_chapters", 12)
-    if chapter_number <= estimated_chapters // 3:
-        current_act = "act1"
-        act_description = outline.get("structure", {}).get("act1", "Setup phase")
-    elif chapter_number <= (estimated_chapters * 2) // 3:
-        current_act = "act2" 
-        act_description = outline.get("structure", {}).get("act2", "Development phase")
-    else:
-        current_act = "act3"
-        act_description = outline.get("structure", {}).get("act3", "Resolution phase")
-    
-    # Build character context
-    character_context = ""
-    if characters:
-        character_context = "\n\nCharacter Information:\n"
-        for name, profile in characters.items():
-            character_context += f"- {name} ({profile.get('role', 'character')}): {profile.get('personality', '')} - {profile.get('motivation', '')}\n"
-    
-    # Create detailed prompt for LLM
-    writing_prompt = f"""Write Chapter {chapter_number} of a {genre} novel with the theme of {theme}.
-
-CHAPTER FOCUS: {chapter_focus}
-
-OUTLINE CONTEXT:
-- This is {current_act.upper()}: {act_description}
-- Novel Theme: {theme}
-- Genre: {genre}
-
-{character_context}
-
-WRITING GUIDELINES:
-- Write approximately 800-1200 words
-- Follow {current_act} story structure
-- Maintain {genre} genre conventions
-- Advance the {theme} theme
-- Include rich descriptions, dialogue, and character development
-- Create engaging prose that hooks the reader
-
-Please write the complete chapter content now:"""
-
-    print(f"--- Tool: Generating chapter content with LLM ---")
-    
-    # Call LLM to generate actual chapter content
-    generated_content = call_llm_for_writing(writing_prompt)
-    word_count = len(generated_content.split())
-    
-    chapter_content = {
-        "chapter_number": chapter_number,
-        "title": f"Chapter {chapter_number}: {chapter_focus}",
-        "content": generated_content,
-        "act": current_act,
-        "act_description": act_description,
-        "outline_reference": outline.get("title", "Novel outline"),
-        "word_count": word_count,
-        "notes": f"Chapter follows {current_act} structure from outline and uses established character profiles"
-    }
-    
-    # Save chapter to state
-    if "chapters" not in tool_context.state:
-        tool_context.state["chapters"] = {}
-    tool_context.state["chapters"][chapter_number] = chapter_content
-    
-    print(f"--- Tool: Completed chapter {chapter_number} in {current_act} ({word_count} words) ---")
-    
-    return {"status": "success", "chapter": chapter_content}
+# Remove this function - no longer needed as agents will generate content directly
 
 def get_novel_progress(tool_context: ToolContext) -> dict:
     """Gets the current progress of the novel."""
@@ -218,8 +130,16 @@ def create_agents():
     outline_agent = Agent(
         model=llm,
         name="outline_agent",
-        instruction="You are the Outline Agent. Your task is to create comprehensive novel outlines using the 'create_outline' tool. "
-                   "Focus on story structure, pacing, and thematic development.",
+        instruction="""You are the Outline Agent. You create comprehensive novel outlines with proper story structure.
+
+When creating an outline, focus on:
+1. Three-act story structure (Setup, Development, Resolution)
+2. Thematic development throughout the story
+3. Proper pacing and plot progression
+4. Estimated chapter count based on target length
+5. Clear protagonist journey and character arcs
+
+Use the 'create_outline' tool to structure and save the outline to project state.""",
         description="Specializes in creating detailed novel outlines with proper story structure.",
         tools=[create_outline],
     )
@@ -228,15 +148,156 @@ def create_agents():
     character_agent = Agent(
         model=llm,
         name="character_agent",
-        instruction="You are the Character Profile Agent. Your task is to create detailed character profiles using the 'create_character_profile' tool. "
-                   "Focus on character development, backstory, motivation, and relationships.",
+        instruction="""You are the Character Profile Agent. You create detailed character profiles and development arcs.
+
+CURRENT PROJECT CONTEXT:
+Genre: {novel_genre?}
+Theme: {novel_theme?}
+Outline: {novel_outline?}
+
+When creating character profiles, focus on:
+1. Rich backstory that supports the story theme
+2. Clear character motivation and goals
+3. Personality traits that create interesting dynamics
+4. Character arc that aligns with the outline structure
+5. Relationships with other characters
+6. Physical appearance that fits the genre/setting
+
+Use the 'create_character_profile' tool to structure and save profiles to project state.""",
         description="Specializes in creating rich, detailed character profiles and development arcs.",
         tools=[create_character_profile],
     )
 
-    # Import and create the sophisticated chapter writing system
-    from .chapter_agents import create_chapter_agents
-    act_agent = create_chapter_agents()  # This contains sub-agents for different chapter types
+    # Create Chapter Writing Agents with instruction interpolation
+    opening_agent = Agent(
+        model=llm,
+        name="opening_chapter_agent",
+        instruction="""You are the Opening Chapter Specialist. You write compelling opening chapters for novels.
+
+CURRENT PROJECT CONTEXT:
+Genre: {novel_genre?}
+Theme: {novel_theme?}
+Outline: {novel_outline?}
+Characters: {character_profiles?}
+
+Your task is to write an engaging opening chapter that:
+1. Uses a strong hook to grab reader attention
+2. Introduces the main character naturally
+3. Establishes the world/setting with vivid descriptions
+4. Follows the Act 1 structure from the outline
+5. Begins establishing the novel's theme
+6. Writes 800-1200 words of compelling prose
+7. Ends with intrigue that makes readers want to continue
+
+When asked to write an opening chapter, generate the complete chapter content directly without using any tools.""",
+        description="Specializes in writing engaging opening chapters that hook readers and follow the outline.",
+        tools=[],  # No tools needed - generate content directly
+    )
+
+    action_agent = Agent(
+        model=llm,
+        name="action_chapter_agent", 
+        instruction="""You are the Action Chapter Specialist. You write exciting action and conflict scenes.
+
+CURRENT PROJECT CONTEXT:
+Genre: {novel_genre?}
+Theme: {novel_theme?}
+Outline: {novel_outline?}
+Characters: {character_profiles?}
+
+Your task is to write intense action chapters that:
+1. Feature fast-paced narrative with varied sentence lengths
+2. Include clear, easy-to-follow action sequences
+3. Show character reactions and emotions during conflict
+4. Advance the main plot through action
+5. Follow the Act 2 development structure from the outline
+6. Advance the novel's theme through conflict
+7. Write 800-1200 words of engaging action
+8. Maintain genre conventions throughout
+
+When asked to write an action chapter, generate the complete chapter content directly without using any tools.""",
+        description="Specializes in writing fast-paced action and conflict chapters.",
+        tools=[],  # No tools needed - generate content directly
+    )
+
+    dialogue_agent = Agent(
+        model=llm,
+        name="dialogue_chapter_agent",
+        instruction="""You are the Dialogue Chapter Specialist. You write character-driven dialogue scenes.
+
+CURRENT PROJECT CONTEXT:
+Genre: {novel_genre?}
+Theme: {novel_theme?}
+Outline: {novel_outline?}
+Characters: {character_profiles?}
+
+Your task is to write dialogue-heavy chapters that:
+1. Give each character a distinct voice and speaking style
+2. Maintain natural conversation flow with appropriate pacing
+3. Include subtext and character motivation in dialogue
+4. Reveal important plot information through conversation
+5. Support the novel's theme through character interaction
+6. Include minimal but effective action/description between dialogue
+7. Write 800-1200 words primarily focused on dialogue
+8. Develop character relationships and dynamics
+
+When asked to write a dialogue chapter, generate the complete chapter content directly without using any tools.""",
+        description="Specializes in writing dialogue-heavy chapters with strong character interaction.",
+        tools=[],  # No tools needed - generate content directly
+    )
+
+    climax_agent = Agent(
+        model=llm,
+        name="climax_chapter_agent",
+        instruction="""You are the Climax Chapter Specialist. You write powerful climactic scenes with resolution.
+
+CURRENT PROJECT CONTEXT:
+Genre: {novel_genre?}
+Theme: {novel_theme?}  
+Outline: {novel_outline?}
+Characters: {character_profiles?}
+
+Your task is to write climactic chapters that:
+1. Build to maximum tension and stakes
+2. Feature the main confrontation/resolution
+3. Reach the emotional peak of the story
+4. Address and resolve the core theme
+5. Complete character arcs established in character profiles
+6. Fulfill the Act 3 structure from the outline
+7. Write 1000-1500 words of intense climactic content
+8. Provide satisfying conflict resolution
+
+When asked to write a climax chapter, generate the complete chapter content directly without using any tools.""",
+        description="Specializes in writing climactic chapters with emotional and plot resolution.",
+        tools=[],  # No tools needed - generate content directly
+    )
+
+    # Act Agent coordinates the chapter writing specialists
+    act_agent = Agent(
+        name="act_agent",
+        model=llm,
+        description="Act Writing Coordinator: Manages different types of chapter writing through specialized sub-agents.",
+        instruction="""You are the Act Agent, coordinating chapter writing across different chapter types.
+
+CURRENT PROJECT CONTEXT:
+Genre: {novel_genre?}
+Theme: {novel_theme?}
+Outline: {novel_outline?}
+Characters: {character_profiles?}
+
+CRITICAL: Always ensure chapters follow the novel outline structure and character profiles.
+
+Delegate chapter writing as follows:
+- Opening chapters → 'opening_chapter_agent' 
+- Action/conflict scenes → 'action_chapter_agent'
+- Dialogue/character development scenes → 'dialogue_chapter_agent'
+- Climactic/resolution scenes → 'climax_chapter_agent'
+
+Each specialist has access to the same project context and will generate content directly.""",
+        tools=[],  # Coordinates through sub-agents
+        sub_agents=[opening_agent, action_agent, dialogue_agent, climax_agent],
+        output_key="chapter_writing_result"
+    )
 
     # Progress Tracking Agent
     progress_agent = Agent(
@@ -253,11 +314,30 @@ def create_agents():
         name="novel_write_agent",
         model=llm,
         description="Main novel writing orchestrator: Coordinates outline creation, character development, chapter writing, and progress tracking.",
-        instruction="You are the Novel Writing Agent. You coordinate the entire novel writing process. "
-                   "Delegate outline creation to 'outline_agent', character development to 'character_agent', "
-                   "chapter writing to 'act_agent' (which has specialized sub-agents for different chapter types), "
-                   "and progress tracking to 'progress_agent'. "
-                   "Ensure consistency across all elements and guide the overall narrative development.",
+        instruction="""You are the Novel Writing Agent. You coordinate the entire novel writing process.
+
+CURRENT PROJECT STATUS:
+Genre: {novel_genre?}
+Theme: {novel_theme?}
+Target Length: {novel_target_length?}
+Outline Complete: {novel_outline?}
+Character Profiles: {character_profiles?}
+Chapters Written: {chapters?}
+
+Your responsibilities:
+1. Guide users through the complete novel writing workflow
+2. Delegate outline creation to 'outline_agent'
+3. Delegate character development to 'character_agent' 
+4. Delegate chapter writing to 'act_agent' (which has specialized sub-agents)
+5. Delegate progress tracking to 'progress_agent'
+6. Ensure consistency across all elements
+7. Guide overall narrative development
+
+Always ensure that:
+- Outline is created before character development
+- Characters are developed before chapter writing
+- Each chapter follows the established outline and character profiles
+- The story maintains thematic consistency throughout""",
         tools=[],  # Root agent coordinates but doesn't have direct tools
         sub_agents=[outline_agent, character_agent, act_agent, progress_agent],
         output_key="novel_project_status"
