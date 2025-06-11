@@ -2,7 +2,7 @@
 title: Minion Adk
 emoji: 🚀
 colorFrom: red
-colorTo: red
+colorTo: orange
 sdk: docker
 app_port: 8000
 tags:
@@ -11,6 +11,7 @@ pinned: false
 short_description: minion-adk
 license: mit
 ---
+
 # Simple ADK Calculator Agent
 
 # Note
