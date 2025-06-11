@@ -4,6 +4,7 @@ from google.adk.agents import Agent
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools.tool_context import ToolContext
 from typing import Dict, Any
+import google.generativeai as genai
 
 # Load environment variables
 load_dotenv()
@@ -23,6 +24,20 @@ def create_llm():
         api_version=os.getenv("AZURE_API_VERSION")
     )
 
+def call_llm_for_writing(prompt: str) -> str:
+    """Helper function to call LLM for actual content generation."""
+    try:
+        # Configure Gemini
+        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel("gemini-2.0-flash-exp")
+        
+        # Generate content
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        print(f"Error calling LLM: {e}")
+        return f"[LLM Error: Could not generate content. {str(e)}]"
+
 # Specialized Chapter Writing Tools
 def write_opening_chapter(scene_setting: str, main_character: str, hook_type: str, tool_context: ToolContext) -> dict:
     """Writes an opening chapter with strong hook and character introduction."""
@@ -38,17 +53,56 @@ def write_opening_chapter(scene_setting: str, main_character: str, hook_type: st
     act1_structure = outline.get("structure", {}).get("act1", "Setup phase")
     character_info = characters.get(main_character, {})
     
+    # Build character context
+    character_context = ""
+    if character_info:
+        character_context = f"""
+CHARACTER PROFILE - {main_character}:
+- Role: {character_info.get('role', 'protagonist')}
+- Background: {character_info.get('background', 'to be developed')}
+- Personality: {character_info.get('personality', 'to be developed')}
+- Motivation: {character_info.get('motivation', 'to be developed')}
+- Appearance: {character_info.get('appearance', 'to be described')}
+"""
+    
+    # Create detailed prompt for opening chapter
+    writing_prompt = f"""Write the opening chapter of a {genre} novel with the theme of {theme}.
+
+CHAPTER REQUIREMENTS:
+- Setting: {scene_setting}
+- Main Character: {main_character}
+- Hook Type: {hook_type}
+- Act 1 Structure: {act1_structure}
+
+{character_context}
+
+WRITING GUIDELINES:
+- Start with a compelling {hook_type} hook
+- Introduce {main_character} naturally in the scene
+- Establish the {scene_setting} with vivid descriptions
+- Follow {genre} genre conventions
+- Begin establishing the {theme} theme
+- Write 800-1200 words
+- Use engaging prose with good pacing
+- End with intrigue that makes readers want to continue
+
+Please write the complete opening chapter now:"""
+
+    print(f"--- Tool: Generating opening chapter content with LLM ---")
+    
+    # Call LLM to generate actual chapter content
+    generated_content = call_llm_for_writing(writing_prompt)
+    word_count = len(generated_content.split())
+    
     chapter_content = {
         "chapter_type": "opening",
         "scene_setting": scene_setting,
         "main_character": main_character,
         "hook_type": hook_type,
-        "content": f"Opening chapter set in {scene_setting}, introducing {main_character}. "
-                  f"Uses {hook_type} hook in {genre} style, establishing {theme} theme. "
-                  f"Follows outline Act 1: {act1_structure}. "
-                  f"Character motivation: {character_info.get('motivation', 'to be established')}.",
+        "content": generated_content,
         "outline_alignment": act1_structure,
         "character_reference": character_info.get("name", main_character),
+        "word_count": word_count,
         "writing_notes": [
             "Strong opening hook to grab reader attention",
             "Character introduction with clear motivation",
@@ -57,6 +111,8 @@ def write_opening_chapter(scene_setting: str, main_character: str, hook_type: st
             f"Aligns with outline Act 1: {act1_structure}"
         ]
     }
+    
+    print(f"--- Tool: Completed opening chapter ({word_count} words) ---")
     
     return {"status": "success", "chapter": chapter_content}
 
@@ -73,17 +129,42 @@ def write_action_chapter(action_type: str, conflict_level: str, characters_invol
     # Usually action chapters are in Act 2 (development/conflict)
     act2_structure = outline.get("structure", {}).get("act2", "Development and conflict phase")
     
+    # Create writing prompt for action chapter
+    writing_prompt = f"""Write an action chapter for a {genre} novel with the theme of {theme}.
+
+ACTION REQUIREMENTS:
+- Action Type: {action_type}
+- Conflict Level: {conflict_level}
+- Characters Involved: {characters_involved}
+- Act 2 Structure: {act2_structure}
+
+WRITING GUIDELINES:
+- Write 800-1200 words of intense {action_type}
+- Maintain {conflict_level} intensity throughout
+- Include all specified characters: {characters_involved}
+- Use fast-paced narrative with varied sentence lengths
+- Show clear action sequences that are easy to follow
+- Include character reactions and emotions during conflict
+- Advance the {theme} theme through the action
+- Follow {genre} genre conventions
+
+Please write the complete action chapter now:"""
+
+    print(f"--- Tool: Generating action chapter content with LLM ---")
+    
+    # Call LLM to generate actual chapter content
+    generated_content = call_llm_for_writing(writing_prompt)
+    word_count = len(generated_content.split())
+
     chapter_content = {
         "chapter_type": "action",
         "action_type": action_type,
         "conflict_level": conflict_level,
         "characters_involved": characters_involved,
-        "content": f"Action chapter featuring {action_type} with {conflict_level} intensity. "
-                  f"Characters involved: {characters_involved}. Written in {genre} style. "
-                  f"Advances {theme} theme through conflict. "
-                  f"Follows outline structure: {act2_structure}.",
+        "content": generated_content,
         "outline_alignment": act2_structure,
         "theme_advancement": theme,
+        "word_count": word_count,
         "writing_notes": [
             "Fast-paced narrative with short sentences",
             "Clear action sequences easy to follow",
@@ -92,6 +173,8 @@ def write_action_chapter(action_type: str, conflict_level: str, characters_invol
             f"Develops conflict as outlined in: {act2_structure}"
         ]
     }
+    
+    print(f"--- Tool: Completed action chapter ({word_count} words) ---")
     
     return {"status": "success", "chapter": chapter_content}
 
@@ -109,18 +192,43 @@ def write_dialogue_chapter(conversation_purpose: str, character_dynamics: str, r
     act_structures = outline.get("structure", {})
     relevant_structure = f"Act 1: {act_structures.get('act1', '')} / Act 2: {act_structures.get('act2', '')}"
     
+    # Create writing prompt for dialogue chapter
+    writing_prompt = f"""Write a dialogue-heavy chapter for a {genre} novel with the theme of {theme}.
+
+DIALOGUE REQUIREMENTS:
+- Conversation Purpose: {conversation_purpose}
+- Character Dynamics: {character_dynamics}
+- Revelation Type: {revelation_type}
+- Theme Development: {theme}
+
+WRITING GUIDELINES:
+- Write 800-1200 words primarily focused on dialogue
+- Give each character a distinct voice and speaking style
+- Maintain natural conversation flow with appropriate pacing
+- Include subtext and character motivation in the dialogue
+- Reveal important information: {revelation_type}
+- Support the {theme} theme through character interaction
+- Include minimal but effective action/description between dialogue
+- Follow {genre} genre conventions
+
+Please write the complete dialogue chapter now:"""
+
+    print(f"--- Tool: Generating dialogue chapter content with LLM ---")
+    
+    # Call LLM to generate actual chapter content
+    generated_content = call_llm_for_writing(writing_prompt)
+    word_count = len(generated_content.split())
+
     chapter_content = {
         "chapter_type": "dialogue",
         "conversation_purpose": conversation_purpose,
         "character_dynamics": character_dynamics,
         "revelation_type": revelation_type,
-        "content": f"Dialogue-focused chapter for {conversation_purpose}. "
-                  f"Character dynamics: {character_dynamics}. Reveals: {revelation_type}. "
-                  f"Supports {theme} theme through character interaction. "
-                  f"Advances plot according to outline structure.",
+        "content": generated_content,
         "outline_reference": relevant_structure,
         "theme_development": theme,
         "character_arcs": [char.get("character_arc", "development") for char in characters.values()],
+        "word_count": word_count,
         "writing_notes": [
             "Distinct voice for each character",
             "Natural conversation flow",
@@ -129,6 +237,8 @@ def write_dialogue_chapter(conversation_purpose: str, character_dynamics: str, r
             f"Character development aligns with outline themes"
         ]
     }
+    
+    print(f"--- Tool: Completed dialogue chapter ({word_count} words) ---")
     
     return {"status": "success", "chapter": chapter_content}
 
@@ -146,19 +256,55 @@ def write_climax_chapter(climax_type: str, resolution_approach: str, emotional_p
     act3_structure = outline.get("structure", {}).get("act3", "Resolution and conclusion")
     character_arcs = [char.get("character_arc", "growth") for char in characters.values()]
     
+    # Build character context for climax
+    character_names = [char.get('name', 'character') for char in characters.values()]
+    character_context = ""
+    if characters:
+        character_context = "\n\nCHARACTER ARCS TO COMPLETE:\n"
+        for name, profile in characters.items():
+            character_context += f"- {name}: {profile.get('character_arc', 'growth and resolution')}\n"
+
+    # Create writing prompt for climax chapter
+    writing_prompt = f"""Write the climactic chapter for a {genre} novel with the theme of {theme}.
+
+CLIMAX REQUIREMENTS:
+- Climax Type: {climax_type}
+- Resolution Approach: {resolution_approach}
+- Emotional Peak: {emotional_peak}
+- Act 3 Structure: {act3_structure}
+
+{character_context}
+
+WRITING GUIDELINES:
+- Write 1000-1500 words of intense climactic action
+- Build to maximum tension and stakes
+- Feature {climax_type} confrontation as the centerpiece
+- Resolve through {resolution_approach}
+- Reach {emotional_peak} emotional intensity
+- Address and resolve the core {theme} theme
+- Complete character arcs for: {', '.join(character_names)}
+- Provide satisfying conflict resolution
+- Deliver on the promises made in the outline
+- Follow {genre} genre conventions
+
+Please write the complete climactic chapter now:"""
+
+    print(f"--- Tool: Generating climax chapter content with LLM ---")
+    
+    # Call LLM to generate actual chapter content
+    generated_content = call_llm_for_writing(writing_prompt)
+    word_count = len(generated_content.split())
+
     chapter_content = {
         "chapter_type": "climax",
         "climax_type": climax_type,
         "resolution_approach": resolution_approach,
         "emotional_peak": emotional_peak,
-        "content": f"Climactic chapter with {climax_type} confrontation. "
-                  f"Resolves through {resolution_approach}, reaching {emotional_peak}. "
-                  f"Addresses core {theme} theme. "
-                  f"Fulfills outline Act 3: {act3_structure}. "
-                  f"Completes character arcs for: {', '.join([char.get('name', 'character') for char in characters.values()])}.",
+        "content": generated_content,
         "outline_fulfillment": act3_structure,
         "theme_resolution": theme,
         "character_arc_completion": character_arcs,
+        "word_count": word_count,
         "writing_notes": [
             "Maximum tension and stakes",
             "Character growth culmination", 
@@ -168,6 +314,8 @@ def write_climax_chapter(climax_type: str, resolution_approach: str, emotional_p
             "All character arcs reach resolution"
         ]
     }
+    
+    print(f"--- Tool: Completed climax chapter ({word_count} words) ---")
     
     return {"status": "success", "chapter": chapter_content}
 

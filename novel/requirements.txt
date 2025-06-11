@@ -1,4 +1,5 @@
 google-adk
 python-dotenv
 asyncio
-typing 
+typing
+google-generativeai 

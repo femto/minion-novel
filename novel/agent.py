@@ -12,6 +12,7 @@ from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
 from typing import Optional, Dict, Any
+import google.generativeai as genai
 
 # Load environment variables
 load_dotenv()
@@ -30,6 +31,20 @@ def create_llm():
         api_key=os.getenv("AZURE_OPENAI_API_KEY"),
         api_version=os.getenv("AZURE_API_VERSION")
     )
+
+def call_llm_for_writing(prompt: str) -> str:
+    """Helper function to call LLM for actual content generation."""
+    try:
+        # Configure Gemini
+        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel("gemini-2.0-flash-exp")
+        
+        # Generate content
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        print(f"Error calling LLM: {e}")
+        return f"[LLM Error: Could not generate content. {str(e)}]"
 
 # Novel Writing Tools
 def create_outline(genre: str, theme: str, target_length: str, tool_context: ToolContext) -> dict:
@@ -119,22 +134,49 @@ def write_chapter(chapter_number: int, chapter_focus: str, tool_context: ToolCon
         current_act = "act3"
         act_description = outline.get("structure", {}).get("act3", "Resolution phase")
     
-    # Reference outline structure in chapter content
-    outline_reference = f"Following {current_act} structure: {act_description}"
-    character_list = list(characters.keys()) if characters else ["main character"]
+    # Build character context
+    character_context = ""
+    if characters:
+        character_context = "\n\nCharacter Information:\n"
+        for name, profile in characters.items():
+            character_context += f"- {name} ({profile.get('role', 'character')}): {profile.get('personality', '')} - {profile.get('motivation', '')}\n"
+    
+    # Create detailed prompt for LLM
+    writing_prompt = f"""Write Chapter {chapter_number} of a {genre} novel with the theme of {theme}.
+
+CHAPTER FOCUS: {chapter_focus}
+
+OUTLINE CONTEXT:
+- This is {current_act.upper()}: {act_description}
+- Novel Theme: {theme}
+- Genre: {genre}
+
+{character_context}
+
+WRITING GUIDELINES:
+- Write approximately 800-1200 words
+- Follow {current_act} story structure
+- Maintain {genre} genre conventions
+- Advance the {theme} theme
+- Include rich descriptions, dialogue, and character development
+- Create engaging prose that hooks the reader
+
+Please write the complete chapter content now:"""
+
+    print(f"--- Tool: Generating chapter content with LLM ---")
+    
+    # Call LLM to generate actual chapter content
+    generated_content = call_llm_for_writing(writing_prompt)
+    word_count = len(generated_content.split())
     
     chapter_content = {
         "chapter_number": chapter_number,
         "title": f"Chapter {chapter_number}: {chapter_focus}",
-        "content": f"Chapter {chapter_number} focusing on {chapter_focus}. "
-                  f"{outline_reference}. "
-                  f"Written in {genre} style, advancing {theme} theme. "
-                  f"Characters involved: {', '.join(character_list)}. "
-                  f"Aligns with overall story structure from outline.",
+        "content": generated_content,
         "act": current_act,
         "act_description": act_description,
         "outline_reference": outline.get("title", "Novel outline"),
-        "word_count": 2500,  # Mock word count
+        "word_count": word_count,
         "notes": f"Chapter follows {current_act} structure from outline and uses established character profiles"
     }
     
@@ -143,7 +185,7 @@ def write_chapter(chapter_number: int, chapter_focus: str, tool_context: ToolCon
         tool_context.state["chapters"] = {}
     tool_context.state["chapters"][chapter_number] = chapter_content
     
-    print(f"--- Tool: Completed chapter {chapter_number} in {current_act} ---")
+    print(f"--- Tool: Completed chapter {chapter_number} in {current_act} ({word_count} words) ---")
     
     return {"status": "success", "chapter": chapter_content}
 
