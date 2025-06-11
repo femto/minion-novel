@@ -3,3 +3,4 @@ python-dotenv
 asyncio
 typing
 google-generativeai
+litellm
