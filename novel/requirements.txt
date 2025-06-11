@@ -1,4 +1,0 @@
-google-adk
-python-dotenv
-asyncio
-typing 

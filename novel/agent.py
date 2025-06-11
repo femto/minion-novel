@@ -12,6 +12,7 @@ from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
 from typing import Optional, Dict, Any
+import google.generativeai as genai
 
 # Load environment variables
 load_dotenv()
@@ -31,43 +32,70 @@ def create_llm():
         api_version=os.getenv("AZURE_API_VERSION")
     )
 
-# No longer needed - agents generate content directly
+def call_llm_for_content_generation(prompt: str) -> str:
+    """Helper function to call LLM for content generation in tools."""
+    try:
+        # Configure Gemini
+        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel("gemini-2.0-flash-exp")
+        
+        # Generate content
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        print(f"Error calling LLM: {e}")
+        return f"[LLM Error: Could not generate content. {str(e)}]"
 
 # Novel Writing Tools
 def create_outline(genre: str, theme: str, target_length: str, tool_context: ToolContext) -> dict:
     """Creates a novel outline based on genre, theme, and target length."""
     print(f"--- Tool: create_outline called for {genre} novel with theme: {theme} ---")
     
-    # Save to state
+    # Save basic info to state
     tool_context.state["novel_genre"] = genre
     tool_context.state["novel_theme"] = theme
     tool_context.state["novel_target_length"] = target_length
     
-    # Mock outline creation (in real implementation, this would be more sophisticated)
-    outline_template = {
-        "fantasy": "Epic journey with magic and mythical creatures",
-        "mystery": "Crime investigation with clues and suspects", 
-        "romance": "Love story with obstacles and resolution",
-        "sci-fi": "Future technology and space exploration",
-        "thriller": "Suspenseful plot with danger and tension"
-    }
+    # Create detailed prompt for outline generation
+    outline_prompt = f"""Create a detailed novel outline for a {genre} story with the theme of {theme}.
+
+TARGET LENGTH: {target_length} (short=~50k words, medium=~80k words, long=~120k words)
+
+Please provide a comprehensive outline with:
+1. A compelling novel title
+2. Three-act structure with detailed descriptions:
+   - Act 1 (Setup): Character introduction, world-building, inciting incident
+   - Act 2 (Development): Rising action, conflicts, character development  
+   - Act 3 (Resolution): Climax, falling action, conclusion
+3. Estimated chapter count appropriate for target length
+4. Key plot points and character arcs
+5. How the {theme} theme will be developed throughout
+
+Format as a structured outline suitable for {genre} fiction."""
+
+    print(f"--- Tool: Generating outline with LLM ---")
     
-    base_outline = outline_template.get(genre.lower(), "General narrative structure")
+    # Generate outline using LLM
+    generated_outline_text = call_llm_for_content_generation(outline_prompt)
+    
+    # Create structured outline data
+    estimated_chapters = 12 if target_length == "short" else (18 if target_length == "medium" else 24)
     
     outline = {
-        "title": f"Novel outline for {genre} story",
+        "title": f"Generated {genre.capitalize()} Novel",
         "theme": theme,
         "target_length": target_length,
+        "generated_outline": generated_outline_text,
         "structure": {
-            "act1": f"Setup - Introduce protagonist and world ({base_outline})",
-            "act2": f"Development - Main conflict and challenges related to {theme}",
-            "act3": f"Resolution - Climax and conclusion resolving the {theme}"
+            "act1": f"Setup phase for {genre} story exploring {theme}",
+            "act2": f"Development phase with conflict and {theme} challenges", 
+            "act3": f"Resolution phase concluding {theme} journey"
         },
-        "estimated_chapters": 12 if target_length == "short" else 24
+        "estimated_chapters": estimated_chapters
     }
     
     tool_context.state["novel_outline"] = outline
-    print(f"--- Tool: Created outline and saved to state ---")
+    print(f"--- Tool: Created LLM-generated outline ({estimated_chapters} chapters) ---")
     
     return {"status": "success", "outline": outline}
 
@@ -78,16 +106,47 @@ def create_character_profile(character_name: str, character_role: str, tool_cont
     # Get novel context from state
     genre = tool_context.state.get("novel_genre", "general")
     theme = tool_context.state.get("novel_theme", "adventure")
+    outline = tool_context.state.get("novel_outline", {})
+    
+    # Create detailed prompt for character creation
+    character_prompt = f"""Create a detailed character profile for "{character_name}" who plays the role of {character_role} in a {genre} novel.
+
+NOVEL CONTEXT:
+Genre: {genre}
+Theme: {theme}
+Outline: {outline.get('generated_outline', 'Basic story structure')}
+
+Please create a comprehensive character profile including:
+1. Full name and age
+2. Physical appearance and distinctive features
+3. Personality traits and quirks
+4. Background and personal history
+5. Motivations and goals
+6. Skills and abilities relevant to the story
+7. Relationships with other characters
+8. Internal conflicts and flaws
+9. Character arc throughout the story
+10. How they contribute to the {theme} theme
+
+Make the character compelling, three-dimensional, and appropriate for the {genre} genre."""
+
+    print(f"--- Tool: Generating character profile with LLM ---")
+    
+    # Generate character profile using LLM
+    generated_profile_text = call_llm_for_content_generation(character_prompt)
     
     profile = {
         "name": character_name,
         "role": character_role,
-        "background": f"Character background tailored for {genre} genre",
-        "personality": f"Personality traits that support the {theme} theme",
-        "motivation": f"Drives related to the main {theme}",
+        "genre": genre,
+        "theme_connection": theme,
+        "generated_profile": generated_profile_text,
+        "background": f"Detailed background for {character_role} in {genre} story",
+        "personality": f"Complex personality supporting {theme} theme",
+        "motivation": f"Character drives related to {theme}",
         "appearance": f"Physical description fitting {genre} setting",
-        "relationships": "Connections to other characters",
-        "character_arc": f"Growth journey throughout the story"
+        "relationships": "Detailed character connections",
+        "character_arc": f"Development journey throughout the story"
     }
     
     # Save to state
@@ -95,7 +154,7 @@ def create_character_profile(character_name: str, character_role: str, tool_cont
         tool_context.state["character_profiles"] = {}
     tool_context.state["character_profiles"][character_name] = profile
     
-    print(f"--- Tool: Created character profile for {character_name} ---")
+    print(f"--- Tool: Created LLM-generated character profile for {character_name} ---")
     
     return {"status": "success", "profile": profile}
 
