@@ -58,7 +58,7 @@ root_agent = Agent(
     name="weather_time_agent",
     #model="gemini-2.0-flash",
 
-    model="gemini-2.5-flash-preview-native-audio-dialog",
+    model="gemini-2.0-flash-exp",
     description=(
         "Agent to answer questions about the time and weather in a city."
     ),
