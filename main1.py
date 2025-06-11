@@ -111,7 +111,8 @@ async def client_to_agent_messaging(websocket, live_request_queue):
 
 app = FastAPI()
 
-STATIC_DIR = Path("static")
+# Use static1 directory if it exists, otherwise fallback to static
+STATIC_DIR = Path("static1") if Path("static1").exists() else Path("static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 

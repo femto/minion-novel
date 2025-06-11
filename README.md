@@ -1,14 +1,23 @@
+---
+title: Minion Adk
+emoji: 🚀
+colorFrom: red
+colorTo: red
+sdk: docker
+app_port: 8501
+tags:
+- streamlit
+pinned: false
+short_description: minion-adk
+license: mit
+---
 # Simple ADK Calculator Agent
 
 # Note
 
-You should create the `google_search_agent` directory at the root level of your project, alongside `simple_adk_agent` and `weather_bot`, not under an `app` directory.
-
-This is a simple example of using Google's Agent Development Kit (ADK) to create a calculator agent that can perform basic arithmetic operations.
-
 ## Setup
 
-1. Make sure you have Python 3.9+ installed
+1. Make sure you have Python 3.11+ installed
 2. Set up a virtual environment (optional but recommended):
    ```
    python -m venv .venv
