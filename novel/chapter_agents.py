@@ -31,6 +31,12 @@ def write_opening_chapter(scene_setting: str, main_character: str, hook_type: st
     # Get context from state
     genre = tool_context.state.get("novel_genre", "general")
     theme = tool_context.state.get("novel_theme", "adventure")
+    outline = tool_context.state.get("novel_outline", {})
+    characters = tool_context.state.get("character_profiles", {})
+    
+    # Reference outline Act 1 structure
+    act1_structure = outline.get("structure", {}).get("act1", "Setup phase")
+    character_info = characters.get(main_character, {})
     
     chapter_content = {
         "chapter_type": "opening",
@@ -38,12 +44,17 @@ def write_opening_chapter(scene_setting: str, main_character: str, hook_type: st
         "main_character": main_character,
         "hook_type": hook_type,
         "content": f"Opening chapter set in {scene_setting}, introducing {main_character}. "
-                  f"Uses {hook_type} hook in {genre} style, establishing {theme} theme.",
+                  f"Uses {hook_type} hook in {genre} style, establishing {theme} theme. "
+                  f"Follows outline Act 1: {act1_structure}. "
+                  f"Character motivation: {character_info.get('motivation', 'to be established')}.",
+        "outline_alignment": act1_structure,
+        "character_reference": character_info.get("name", main_character),
         "writing_notes": [
             "Strong opening hook to grab reader attention",
             "Character introduction with clear motivation",
-            "World-building appropriate to genre",
-            "Foreshadowing of main conflict"
+            "World-building appropriate to genre", 
+            "Foreshadowing of main conflict",
+            f"Aligns with outline Act 1: {act1_structure}"
         ]
     }
     
@@ -53,7 +64,14 @@ def write_action_chapter(action_type: str, conflict_level: str, characters_invol
     """Writes an action-packed chapter with conflict and tension."""
     print(f"--- Tool: write_action_chapter called - {action_type} with {conflict_level} conflict ---")
     
+    # Get context from state
     genre = tool_context.state.get("novel_genre", "general")
+    theme = tool_context.state.get("novel_theme", "adventure")
+    outline = tool_context.state.get("novel_outline", {})
+    characters = tool_context.state.get("character_profiles", {})
+    
+    # Usually action chapters are in Act 2 (development/conflict)
+    act2_structure = outline.get("structure", {}).get("act2", "Development and conflict phase")
     
     chapter_content = {
         "chapter_type": "action",
@@ -61,12 +79,17 @@ def write_action_chapter(action_type: str, conflict_level: str, characters_invol
         "conflict_level": conflict_level,
         "characters_involved": characters_involved,
         "content": f"Action chapter featuring {action_type} with {conflict_level} intensity. "
-                  f"Characters involved: {characters_involved}. Written in {genre} style.",
+                  f"Characters involved: {characters_involved}. Written in {genre} style. "
+                  f"Advances {theme} theme through conflict. "
+                  f"Follows outline structure: {act2_structure}.",
+        "outline_alignment": act2_structure,
+        "theme_advancement": theme,
         "writing_notes": [
             "Fast-paced narrative with short sentences",
             "Clear action sequences easy to follow",
             "Character reactions and emotions during conflict",
-            "Advancement of main plot through action"
+            "Advancement of main plot through action",
+            f"Develops conflict as outlined in: {act2_structure}"
         ]
     }
     
@@ -76,18 +99,34 @@ def write_dialogue_chapter(conversation_purpose: str, character_dynamics: str, r
     """Writes a dialogue-heavy chapter focused on character interaction."""
     print(f"--- Tool: write_dialogue_chapter called - {conversation_purpose} between {character_dynamics} ---")
     
+    # Get context from state
+    genre = tool_context.state.get("novel_genre", "general")
+    theme = tool_context.state.get("novel_theme", "adventure")
+    outline = tool_context.state.get("novel_outline", {})
+    characters = tool_context.state.get("character_profiles", {})
+    
+    # Dialogue chapters can appear in any act, but often in Act 1 (setup) or Act 2 (development)
+    act_structures = outline.get("structure", {})
+    relevant_structure = f"Act 1: {act_structures.get('act1', '')} / Act 2: {act_structures.get('act2', '')}"
+    
     chapter_content = {
         "chapter_type": "dialogue",
         "conversation_purpose": conversation_purpose,
         "character_dynamics": character_dynamics,
         "revelation_type": revelation_type,
         "content": f"Dialogue-focused chapter for {conversation_purpose}. "
-                  f"Character dynamics: {character_dynamics}. Reveals: {revelation_type}.",
+                  f"Character dynamics: {character_dynamics}. Reveals: {revelation_type}. "
+                  f"Supports {theme} theme through character interaction. "
+                  f"Advances plot according to outline structure.",
+        "outline_reference": relevant_structure,
+        "theme_development": theme,
+        "character_arcs": [char.get("character_arc", "development") for char in characters.values()],
         "writing_notes": [
             "Distinct voice for each character",
             "Natural conversation flow",
             "Subtext and character motivation",
-            "Information revelation through dialogue"
+            "Information revelation through dialogue",
+            f"Character development aligns with outline themes"
         ]
     }
     
@@ -97,7 +136,15 @@ def write_climax_chapter(climax_type: str, resolution_approach: str, emotional_p
     """Writes the climactic chapter with maximum tension and resolution."""
     print(f"--- Tool: write_climax_chapter called - {climax_type} climax with {emotional_peak} ---")
     
+    # Get context from state
+    genre = tool_context.state.get("novel_genre", "general")
     theme = tool_context.state.get("novel_theme", "adventure")
+    outline = tool_context.state.get("novel_outline", {})
+    characters = tool_context.state.get("character_profiles", {})
+    
+    # Climax chapters are in Act 3 (resolution)
+    act3_structure = outline.get("structure", {}).get("act3", "Resolution and conclusion")
+    character_arcs = [char.get("character_arc", "growth") for char in characters.values()]
     
     chapter_content = {
         "chapter_type": "climax",
@@ -106,12 +153,19 @@ def write_climax_chapter(climax_type: str, resolution_approach: str, emotional_p
         "emotional_peak": emotional_peak,
         "content": f"Climactic chapter with {climax_type} confrontation. "
                   f"Resolves through {resolution_approach}, reaching {emotional_peak}. "
-                  f"Addresses core {theme} theme.",
+                  f"Addresses core {theme} theme. "
+                  f"Fulfills outline Act 3: {act3_structure}. "
+                  f"Completes character arcs for: {', '.join([char.get('name', 'character') for char in characters.values()])}.",
+        "outline_fulfillment": act3_structure,
+        "theme_resolution": theme,
+        "character_arc_completion": character_arcs,
         "writing_notes": [
             "Maximum tension and stakes",
             "Character growth culmination", 
             "Theme resolution",
-            "Satisfying conflict resolution"
+            "Satisfying conflict resolution",
+            f"Delivers on outline promise: {act3_structure}",
+            "All character arcs reach resolution"
         ]
     }
     
@@ -119,15 +173,17 @@ def write_climax_chapter(climax_type: str, resolution_approach: str, emotional_p
 
 def create_chapter_agents():
     """Creates specialized chapter writing sub-agents."""
-    llm = create_llm()
+    #llm = create_llm()
+    llm = "gemini-2.0-flash-exp"
     
     # Opening Chapter Agent
     opening_agent = Agent(
         model=llm,
         name="opening_chapter_agent",
         instruction="You are the Opening Chapter Specialist. Write compelling opening chapters using 'write_opening_chapter'. "
-                   "Focus on strong hooks, character introduction, and world establishment.",
-        description="Specializes in writing engaging opening chapters that hook readers.",
+                   "ALWAYS reference the novel outline Act 1 structure and character profiles from the project state. "
+                   "Focus on strong hooks, character introduction, world establishment, and alignment with outline.",
+        description="Specializes in writing engaging opening chapters that hook readers and follow the outline.",
         tools=[write_opening_chapter],
     )
     
@@ -167,9 +223,10 @@ def create_chapter_agents():
         model=llm,
         description="Act Writing Coordinator: Manages different types of chapter writing through specialized sub-agents.",
         instruction="You are the Act Agent, coordinating chapter writing across different chapter types. "
+                   "CRITICAL: Always ensure chapters follow the novel outline structure and character profiles. "
                    "Delegate opening chapters to 'opening_chapter_agent', action scenes to 'action_chapter_agent', "
                    "dialogue scenes to 'dialogue_chapter_agent', and climactic scenes to 'climax_chapter_agent'. "
-                   "Ensure each chapter type is handled by the appropriate specialist.",
+                   "Ensure each chapter type is handled by the appropriate specialist and references the outline.",
         tools=[],  # Coordinates through sub-agents
         sub_agents=[opening_agent, action_agent, dialogue_agent, climax_agent],
         output_key="chapter_writing_result"

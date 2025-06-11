@@ -105,14 +105,37 @@ def write_chapter(chapter_number: int, chapter_focus: str, tool_context: ToolCon
     outline = tool_context.state.get("novel_outline", {})
     characters = tool_context.state.get("character_profiles", {})
     genre = tool_context.state.get("novel_genre", "general")
+    theme = tool_context.state.get("novel_theme", "adventure")
+    
+    # Determine which act this chapter belongs to based on outline
+    estimated_chapters = outline.get("estimated_chapters", 12)
+    if chapter_number <= estimated_chapters // 3:
+        current_act = "act1"
+        act_description = outline.get("structure", {}).get("act1", "Setup phase")
+    elif chapter_number <= (estimated_chapters * 2) // 3:
+        current_act = "act2" 
+        act_description = outline.get("structure", {}).get("act2", "Development phase")
+    else:
+        current_act = "act3"
+        act_description = outline.get("structure", {}).get("act3", "Resolution phase")
+    
+    # Reference outline structure in chapter content
+    outline_reference = f"Following {current_act} structure: {act_description}"
+    character_list = list(characters.keys()) if characters else ["main character"]
     
     chapter_content = {
         "chapter_number": chapter_number,
         "title": f"Chapter {chapter_number}: {chapter_focus}",
-        "content": f"This is chapter {chapter_number} focusing on {chapter_focus}. "
-                  f"Written in {genre} style with characters: {list(characters.keys())}",
+        "content": f"Chapter {chapter_number} focusing on {chapter_focus}. "
+                  f"{outline_reference}. "
+                  f"Written in {genre} style, advancing {theme} theme. "
+                  f"Characters involved: {', '.join(character_list)}. "
+                  f"Aligns with overall story structure from outline.",
+        "act": current_act,
+        "act_description": act_description,
+        "outline_reference": outline.get("title", "Novel outline"),
         "word_count": 2500,  # Mock word count
-        "notes": f"Chapter aligns with outline structure and character development"
+        "notes": f"Chapter follows {current_act} structure from outline and uses established character profiles"
     }
     
     # Save chapter to state
@@ -120,7 +143,7 @@ def write_chapter(chapter_number: int, chapter_focus: str, tool_context: ToolCon
         tool_context.state["chapters"] = {}
     tool_context.state["chapters"][chapter_number] = chapter_content
     
-    print(f"--- Tool: Completed chapter {chapter_number} ---")
+    print(f"--- Tool: Completed chapter {chapter_number} in {current_act} ---")
     
     return {"status": "success", "chapter": chapter_content}
 
