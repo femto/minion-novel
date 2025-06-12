@@ -20,34 +20,56 @@ load_dotenv()
 # Configure ADK to use API keys directly
 os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "False"
 
-# Model constants
-MODEL_NAME = "gpt-4.1-nano"  # Azure deployment name
+# Model constants - 可以通过环境变量配置
+USE_AZURE = os.getenv("USE_AZURE", "true").lower() == "true"  # 默认使用Azure
+AZURE_MODEL_NAME = os.getenv("AZURE_MODEL_NAME", "gpt-4.1")  # Azure deployment name
+GOOGLE_MODEL_NAME = os.getenv("GOOGLE_MODEL_NAME", "gemini-2.0-flash-exp")  # Google model name
 
 def create_llm():
-    """Creates a LiteLLM instance configured for Azure."""
-    return LiteLlm(
-        model=f"azure/{MODEL_NAME}",
-        api_base=os.getenv("AZURE_OPENAI_ENDPOINT"),
-        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-        api_version=os.getenv("AZURE_API_VERSION")
-    )
+    """Creates a LLM instance - Azure LiteLLM or Google model string based on environment."""
+    if USE_AZURE:
+        # 返回Azure LiteLLM实例
+        return LiteLlm(
+            model=f"azure/{AZURE_MODEL_NAME}",
+            api_base=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            api_version=os.getenv("AZURE_API_VERSION")
+        )
+    else:
+        # 返回Google模型字符串，ADK会自动处理
+        return GOOGLE_MODEL_NAME
 
-def call_llm_for_content_generation(prompt: str) -> str:
-    """Helper function to call LLM for content generation in tools."""
+async def call_llm_for_content_generation_async(prompt: str) -> str:
+    """Helper function to call LLM for content generation in tools - supports both Azure and Google."""
     try:
-        # Configure Gemini
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel("gemini-2.0-flash-exp")
-        
-        # Generate content
-        response = model.generate_content(prompt)
-        return response.text
+        if USE_AZURE:
+            # 使用Azure通过LiteLLM
+            llm = create_llm()
+            # 创建LlmRequest对象
+            from google.adk.models.llm_request import LlmRequest
+            from google.genai import types
+            
+            content = types.Content(role='user', parts=[types.Part(text=prompt)])
+            llm_request = LlmRequest(contents=[content])
+            
+            # 使用异步生成内容
+            full_response = ""
+            async for response in llm.generate_content_async(llm_request):
+                if response.content and response.content.parts:
+                    full_response += response.content.parts[0].text
+            return full_response
+        else:
+            # 使用Google - 转换为异步
+            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+            model = genai.GenerativeModel(GOOGLE_MODEL_NAME)
+            response = await model.generate_content_async(prompt)
+            return response.text
     except Exception as e:
         print(f"Error calling LLM: {e}")
         return f"[LLM Error: Could not generate content. {str(e)}]"
 
 # Novel Writing Tools
-def create_outline(genre: str, theme: str, target_length: str, tool_context: ToolContext) -> dict:
+async def create_outline(genre: str, theme: str, target_length: str, tool_context: ToolContext) -> dict:
     """Creates a novel outline based on genre, theme, and target length."""
     print(f"--- Tool: create_outline called for {genre} novel with theme: {theme} ---")
     
@@ -76,7 +98,7 @@ Format as a structured outline suitable for {genre} fiction."""
     print(f"--- Tool: Generating outline with LLM ---")
     
     # Generate outline using LLM
-    generated_outline_text = call_llm_for_content_generation(outline_prompt)
+    generated_outline_text = await call_llm_for_content_generation_async(outline_prompt)
     
     # Create structured outline data
     estimated_chapters = 12 if target_length == "short" else (18 if target_length == "medium" else 24)
@@ -99,7 +121,7 @@ Format as a structured outline suitable for {genre} fiction."""
     
     return {"status": "success", "outline": outline}
 
-def create_character_profile(character_name: str, character_role: str, tool_context: ToolContext) -> dict:
+async def create_character_profile(character_name: str, character_role: str, tool_context: ToolContext) -> dict:
     """Creates a detailed character profile."""
     print(f"--- Tool: create_character_profile called for {character_name} as {character_role} ---")
     
@@ -133,7 +155,7 @@ Make the character compelling, three-dimensional, and appropriate for the {genre
     print(f"--- Tool: Generating character profile with LLM ---")
     
     # Generate character profile using LLM
-    generated_profile_text = call_llm_for_content_generation(character_prompt)
+    generated_profile_text = await call_llm_for_content_generation_async(character_prompt)
     
     profile = {
         "name": character_name,
@@ -181,9 +203,8 @@ def get_novel_progress(tool_context: ToolContext) -> dict:
 # Agent definitions
 def create_agents():
     """Creates and returns the novel writing agent team."""
-    # Create LLM instance
-    #llm = create_llm()
-    llm = "gemini-2.0-flash-exp"
+    # Create LLM instance (automatically chooses Azure or Google based on USE_AZURE env var)
+    llm = create_llm()
 
     # Outline Agent
     outline_agent = Agent(
