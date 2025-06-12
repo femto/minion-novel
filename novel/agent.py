@@ -21,7 +21,7 @@ load_dotenv()
 os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "False"
 
 # Model constants - 可以通过环境变量配置
-USE_AZURE = os.getenv("USE_AZURE", "true").lower() == "true"  # 默认使用Azure
+USE_AZURE = os.getenv("USE_AZURE", "false").lower() == "true"  # 默认使用Azure
 AZURE_MODEL_NAME = os.getenv("AZURE_MODEL_NAME", "gpt-4.1")  # Azure deployment name
 GOOGLE_MODEL_NAME = os.getenv("GOOGLE_MODEL_NAME", "gemini-2.0-flash-exp")  # Google model name
 
