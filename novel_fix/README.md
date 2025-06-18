@@ -1,6 +1,29 @@
-# Novel Fix - Fixed Workflow Novel Writing Agent
+# Novel Fix - Fixed Workflow Novel Writing System
 
-A fixed-workflow novel writing system implemented with Google ADK's **Workflow Agent**.
+> **Simple. Automated. Predictable.**
+
+Novel Fix is a **fixed workflow** novel writing system that automatically generates complete novels from a single user input. Unlike dynamic systems that require user guidance, Novel Fix follows a predetermined 6-step sequential process to produce professional-quality novels.
+
+## ✨ Key Features
+
+- 🤖 **Fully Automated**: One input → Complete novel
+- 📝 **Fixed 6-Step Pipeline**: Parameter extraction → Outline → Characters → Act 1 → Act 2 → Act 3  
+- 🎯 **Smart Parameter Detection**: Automatically extracts genre, theme, and length from natural language
+- 📚 **Professional Structure**: 3-act format with proper chapter distribution (14/20/26 chapters)
+- 🔄 **Consistent Results**: Same reliable workflow every time
+- 🚀 **Zero User Intervention**: Set it and forget it approach
+
+## 🆚 Novel vs Novel Fix
+
+| Feature | Novel (Dynamic) | Novel Fix (Fixed) |
+|---------|----------------|-------------------|
+| **User Input** | Ongoing dialogue guidance | Single story request |
+| **Workflow** | LLM-based decisions | Predetermined sequence |
+| **Predictability** | Variable outcomes | Consistent results |
+| **Use Case** | Interactive creation | Batch production |
+| **Complexity** | High (requires guidance) | Low (fully automated) |
+
+---
 
 ## 🎯 Design Philosophy
 
@@ -35,17 +58,6 @@ Based on the [ADK Workflow Agents documentation](https://google.github.io/adk-do
    - Chapter 1: Climax preparation
    - Chapter 2: Climax scene
    - Chapter 3-4: Falling action and resolution
-
-## 🆚 Comparison with novel directory
-
-| Feature | novel (dynamic) | novel_fix (fixed) |
-|---------|----------------|-------------------|
-| **Flow Control** | LLM dynamic decisions | SequentialAgent fixed workflow |
-| **User Interaction** | Requires dialogue guidance | One input, auto execution |
-| **Execution Order** | Variable, depends on LLM judgment | Strict sequence: outline→characters→Act1→Act2→Act3 |
-| **Predictability** | Uncertain | Completely predictable |
-| **Use Case** | Interactive creation | Batch production, automation |
-| **Base Technology** | Sub-agents + LLM coordination | Workflow Agents (SequentialAgent) |
 
 ## 🚀 Usage Methods
 
@@ -138,4 +150,53 @@ Reference ADK documentation:
 - Batch novel production for content factories
 - Standardized workflow creation needs
 - Teaching and demonstrating fixed writing processes
-- Comparative testing of different creation methods 
+- Comparative testing of different creation methods
+
+## Root Agent Creation Methods
+
+The Novel Fix system now uses a **simple SequentialAgent structure**:
+
+### Single Method: Sequential Pipeline
+
+```python
+from novel_fix.agent import create_root_agent
+
+# Creates a SequentialAgent with all steps in fixed order
+root_agent = create_root_agent()
+```
+
+**Structure:**
+```
+novel_fix_sequential_pipeline
+├── 1. parameter_extractor (extracts genre, theme, length from user input)
+├── 2. outline_creator (creates 3-act novel outline)
+├── 3. character_developer (develops protagonist, antagonist, supporting characters)
+├── 4. act_1_writer (writes all Act 1 chapters)
+├── 5. act_2_writer (writes all Act 2 chapters)
+└── 6. act_3_writer (writes all Act 3 chapters)
+```
+
+**Features:**
+- ✅ **One input, complete novel output**: User provides story idea, system produces full novel
+- ✅ **Automatic parameter extraction**: Detects genre, theme, length from natural language
+- ✅ **Fixed workflow**: Same predictable steps every time
+- ✅ **No user intervention**: Fully automated from start to finish
+- ✅ **Professional structure**: 3-act format with proper chapter distribution
+
+**Example user inputs:**
+- "I want to write a mystery novel about a detective solving crimes in a small town"
+- "Create a science fiction story about space exploration with medium length"
+- "Write a short romance novel about finding love"
+
+### Parameter Extraction Details
+
+The first agent automatically extracts:
+
+- **Genre**: fantasy, science fiction, mystery, romance, thriller, horror, historical, adventure, drama
+- **Length**: short (14 chapters), medium (20 chapters), long (26 chapters)  
+- **Theme**: From patterns like "about X", "theme: X", "story about X"
+
+**Default values (if not specified):**
+- Genre: "fantasy"
+- Theme: "adventure and discovery"
+- Length: "medium" 

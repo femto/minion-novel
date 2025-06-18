@@ -5,8 +5,7 @@ from google.adk.agents import LlmAgent, SequentialAgent, Agent
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
-from google.adk.tools import BaseTool
-from google.adk.tools.tool_context import ToolContext
+
 from google.genai import types
 from typing import Optional, Dict, Any, List
 import google.generativeai as genai
@@ -34,370 +33,346 @@ def create_llm():
     else:
         return GOOGLE_MODEL_NAME
 
-# ===== TOOLS FOR PIPELINE CONTROL =====
 
-async def run_fixed_pipeline(genre: str, theme: str, target_length: str, tool_context: ToolContext) -> dict:
-    """Tool to run the complete fixed novel writing pipeline."""
-    print(f"--- Tool: run_fixed_pipeline called for {genre} novel about {theme} ---")
-    
-    # Save pipeline parameters to state
-    tool_context.state["pipeline_genre"] = genre
-    tool_context.state["pipeline_theme"] = theme
-    tool_context.state["pipeline_target_length"] = target_length
-    tool_context.state["pipeline_status"] = "running"
-    
-    # Create the pipeline agent
-    pipeline_agent = create_novel_pipeline_agent(genre, theme, target_length)
-    
-    # Note: In a real implementation, you'd want to run this asynchronously
-    # For now, we'll just indicate that the pipeline has been set up
-    tool_context.state["pipeline_agent"] = "configured"
-    tool_context.state["pipeline_status"] = "ready"
-    
-    return {
-        "status": "success",
-        "message": f"Fixed pipeline configured for {genre} novel about {theme} (length: {target_length})",
-        "steps": [
-            "1. Outline Creation",
-            "2. Character Development", 
-            "3. Act 1 Writing (4 chapters)",
-            "4. Act 2 Writing (6 chapters)",
-            "5. Act 3 Writing (4 chapters)"
-        ]
-    }
-
-async def get_pipeline_status(tool_context: ToolContext) -> dict:
-    """Gets the current status of the fixed pipeline."""
-    print(f"--- Tool: get_pipeline_status called ---")
-    
-    pipeline_status = tool_context.state.get("pipeline_status", "not_started")
-    pipeline_genre = tool_context.state.get("pipeline_genre", "N/A")
-    pipeline_theme = tool_context.state.get("pipeline_theme", "N/A")
-    pipeline_target_length = tool_context.state.get("pipeline_target_length", "N/A")
-    
-    return {
-        "status": pipeline_status,
-        "genre": pipeline_genre,
-        "theme": pipeline_theme,
-        "target_length": pipeline_target_length,
-        "pipeline_type": "Fixed Sequential Workflow"
-    }
 
 # ===== WORKFLOW AGENTS FOR FIXED PIPELINE =====
 
-def create_novel_pipeline_agent(genre: str, theme: str, target_length: str = "medium") -> SequentialAgent:
-    """
-    Creates a SequentialAgent that executes the novel writing pipeline in fixed order:
-    1. Outline Creation
-    2. Character Development  
-    3. Act 1 Writing (with chapters)
-    4. Act 2 Writing (with chapters)
-    5. Act 3 Writing (with chapters)
-    """
+def create_act_agent(act_name: str):
+    """Creates an agent for writing a specific act of the novel."""
     llm = create_llm()
     
-    # Step 1: Outline Agent
-    outline_agent = LlmAgent(
+    act_instructions = {
+        "Act 1": """You are the Act 1 Writer for the Novel Fix system.
+
+Your job is to write all chapters for Act 1 (Setup) based on information from previous steps.
+
+INPUT: Use information from previous agents:
+- Extracted parameters (genre, theme, length)
+- Novel outline (specifically Act 1 chapters)
+- Character profiles
+
+ACT 1 FOCUS:
+- Introduce protagonist and world
+- Establish the main conflict/problem
+- Hook the reader with engaging opening
+- Set up character relationships
+- End with inciting incident
+
+CHAPTER COUNT (based on length):
+- Short novel: 4 chapters
+- Medium novel: 6 chapters  
+- Long novel: 8 chapters
+
+OUTPUT: Write each chapter in sequence:
+- Chapter title
+- Full chapter content (2000-3000 words per chapter)
+- Smooth transitions between chapters
+- Consistent character voice and style""",
+
+        "Act 2": """You are the Act 2 Writer for the Novel Fix system.
+
+Your job is to write all chapters for Act 2 (Development) based on information from previous steps.
+
+INPUT: Use information from previous agents:
+- Extracted parameters, outline, characters
+- Act 1 content for continuity
+
+ACT 2 FOCUS:
+- Develop main conflict and obstacles
+- Character growth and relationship development
+- Rising action and complications
+- Midpoint crisis or revelation
+- Build toward climax
+
+CHAPTER COUNT (based on length):
+- Short novel: 6 chapters
+- Medium novel: 8 chapters
+- Long novel: 10 chapters
+
+OUTPUT: Write each chapter in sequence:
+- Chapter title
+- Full chapter content (2000-3000 words per chapter)
+- Continue story from Act 1
+- Build tension toward Act 3""",
+
+        "Act 3": """You are the Act 3 Writer for the Novel Fix system.
+
+Your job is to write all chapters for Act 3 (Resolution) based on information from previous steps.
+
+INPUT: Use information from previous agents:
+- Extracted parameters, outline, characters
+- Act 1 and Act 2 content for continuity
+
+ACT 3 FOCUS:
+- Climax and confrontation
+- Resolution of main conflict
+- Character arc completion
+- Tie up subplots and loose ends
+- Satisfying conclusion
+
+CHAPTER COUNT (based on length):
+- Short novel: 4 chapters
+- Medium novel: 6 chapters
+- Long novel: 8 chapters
+
+OUTPUT: Write each chapter in sequence:
+- Chapter title
+- Full chapter content (2000-3000 words per chapter)
+- Continue story from Acts 1 & 2
+- Provide satisfying conclusion"""
+    }
+    
+    return Agent(
         model=llm,
-        name="OutlineAgent",
-        instruction=f"""You are the Outline Creation Agent for a {genre} novel with theme '{theme}' and target length '{target_length}'.
+        name=f"{act_name.lower().replace(' ', '_')}_writer",
+        instruction=act_instructions[act_name],
+        description=f"Writes all chapters for {act_name} based on outline and character profiles",
+        output_key=f"{act_name.lower().replace(' ', '_')}_content"
+    )
 
-Create a comprehensive novel outline that includes:
-1. Novel Title
-2. Three-Act Structure:
-   - Act 1 (Setup): 25% of story - Character introduction, world-building, inciting incident
-   - Act 2 (Development): 50% of story - Rising action, conflicts, character development, midpoint crisis
-   - Act 3 (Resolution): 25% of story - Climax, falling action, resolution
-3. Chapter breakdown for each act:
-   - Short novel (~50k words): 4+6+4 = 14 chapters
-   - Medium novel (~80k words): 6+8+6 = 20 chapters
-   - Long novel (~120k words): 8+10+8 = 26 chapters
-4. Key plot points and turning points
-5. Character arcs and theme development
-6. Chapter summaries with specific events
+# ===== PARAMETER EXTRACTION =====
 
-Provide a detailed, structured outline that will guide the entire writing process.""",
-        description=f"Creates comprehensive outline for {genre} novel about {theme}",
+def extract_novel_params_from_text(user_input: str) -> dict:
+    """Extract genre, theme, and target_length from user input text."""
+    import re
+    
+    # Default values
+    params = {
+        "genre": "fantasy",
+        "theme": "adventure and discovery", 
+        "target_length": "medium"
+    }
+    
+    # Extract genre
+    genre_patterns = [
+        r"(fantasy|science fiction|sci-fi|mystery|romance|thriller|horror|historical|adventure|drama)",
+        r"write.*?(fantasy|science fiction|sci-fi|mystery|romance|thriller|horror|historical|adventure|drama)",
+        r"(fantasy|science fiction|sci-fi|mystery|romance|thriller|horror|historical|adventure|drama).*?novel"
+    ]
+    
+    for pattern in genre_patterns:
+        match = re.search(pattern, user_input.lower())
+        if match:
+            genre = match.group(1)
+            if genre == "sci-fi":
+                genre = "science fiction"
+            params["genre"] = genre
+            break
+    
+    # Extract target length
+    length_patterns = [
+        r"(short|medium|long).*?length",
+        r"(short|medium|long).*?novel",
+        r"length.*?(short|medium|long)",
+        r"write.*?(short|medium|long)"
+    ]
+    
+    for pattern in length_patterns:
+        match = re.search(pattern, user_input.lower())
+        if match:
+            params["target_length"] = match.group(1)
+            break
+    
+    # Extract theme (more complex, look for "about X" patterns)
+    theme_patterns = [
+        r"about\s+([^,\.!?]+)",
+        r"theme.*?[:\-]\s*([^,\.!?]+)",
+        r"story.*?about\s+([^,\.!?]+)"
+    ]
+    
+    for pattern in theme_patterns:
+        match = re.search(pattern, user_input.lower())
+        if match:
+            theme = match.group(1).strip()
+            if len(theme) > 5:  # Only use if it's substantial
+                params["theme"] = theme
+            break
+    
+    return params
+
+
+
+# ===== PARAMETER EXTRACTION AGENT =====
+
+def create_parameter_extraction_agent():
+    """Creates an agent that extracts genre, theme, and target_length from user input."""
+    llm = create_llm()
+    
+    return Agent(
+        model=llm,
+        name="parameter_extractor",
+        instruction="""You are a Parameter Extraction Agent for the Novel Fix system.
+
+Your job is to extract three key parameters from user input:
+1. **Genre**: fantasy, science fiction, mystery, romance, thriller, horror, historical, adventure, drama
+2. **Theme**: What the story is about (extract from patterns like "about X", "story of X")
+3. **Target Length**: short, medium, or long
+
+EXTRACTION RULES:
+- Look for explicit mentions of genre, theme, and length
+- Use smart defaults if not specified:
+  - Default genre: "fantasy"
+  - Default theme: "adventure and discovery" 
+  - Default length: "medium"
+
+OUTPUT FORMAT:
+Always respond with exactly this format:
+Genre: [extracted_genre]
+Theme: [extracted_theme]  
+Length: [extracted_length]
+
+Examples:
+Input: "Write a mystery novel about a detective in a small town"
+Output: 
+Genre: mystery
+Theme: a detective in a small town
+Length: medium
+
+Input: "I want a short science fiction story about space exploration"
+Output:
+Genre: science fiction
+Theme: space exploration
+Length: short""",
+        description="Extracts novel parameters from user input",
+        output_key="extracted_parameters"
+    )
+
+def create_outline_agent():
+    """Creates the agent responsible for creating the novel outline."""
+    llm = create_llm()
+    
+    return Agent(
+        model=llm,
+        name="outline_creator",
+        instruction="""You are the Outline Creator for the Novel Fix system.
+
+Your job is to create a comprehensive 3-act novel outline based on the extracted parameters from the previous step.
+
+INPUT: Read the extracted parameters from the previous agent:
+- Genre: The story genre
+- Theme: What the story is about  
+- Length: Determines chapter count (short=14, medium=20, long=26 chapters)
+
+CHAPTER DISTRIBUTION:
+- Short (14 chapters): Act 1 (4 chapters), Act 2 (6 chapters), Act 3 (4 chapters)
+- Medium (20 chapters): Act 1 (6 chapters), Act 2 (8 chapters), Act 3 (6 chapters)  
+- Long (26 chapters): Act 1 (8 chapters), Act 2 (10 chapters), Act 3 (8 chapters)
+
+OUTPUT: Create a detailed outline with:
+1. **Story Summary**: One paragraph overview
+2. **Act 1 Outline**: Chapter-by-chapter breakdown for setup
+3. **Act 2 Outline**: Chapter-by-chapter breakdown for development
+4. **Act 3 Outline**: Chapter-by-chapter breakdown for resolution
+
+Each chapter should have:
+- Chapter title
+- 2-3 sentence summary of events
+- Key plot points or character developments
+
+Make sure the outline fits the specified genre and theme.""",
+        description="Creates detailed 3-act novel outline based on extracted parameters",
         output_key="novel_outline"
     )
+
+def create_character_agent():
+    """Creates the agent responsible for character development."""
+    llm = create_llm()
     
-    # Step 2: Character Development Agent
-    character_agent = LlmAgent(
+    return Agent(
         model=llm,
-        name="CharacterAgent", 
-        instruction=f"""You are the Character Development Agent. Based on the outline: {{novel_outline}}, create detailed character profiles.
+        name="character_developer",
+        instruction="""You are the Character Developer for the Novel Fix system.
 
-Create comprehensive character profiles for:
-1. Main Protagonist - detailed background, motivation, arc
-2. Main Antagonist - complex villain with clear motivation
-3. 2-3 Supporting Characters - each with distinct roles and personalities
+Your job is to create detailed character profiles based on the outline and parameters.
 
-For each character include:
-- Full name, age, appearance
-- Personality traits and quirks
-- Background and personal history
-- Goals, motivations, fears
-- Skills and abilities
-- Character arc throughout the story
-- Relationships with other characters
-- How they serve the theme of '{theme}'
-- Role in each act of the story
+INPUT: Use information from previous steps:
+- Extracted parameters (genre, theme, length)
+- Novel outline with plot structure
 
-Ensure characters fit the {genre} genre and support the established outline.""",
-        description="Develops detailed character profiles based on the outline",
+OUTPUT: Create character profiles for:
+
+1. **PROTAGONIST**:
+   - Name and age
+   - Background and motivation
+   - Character arc throughout the story
+   - Key personality traits
+   - Strengths and flaws
+
+2. **ANTAGONIST** (if applicable to genre):
+   - Name and background
+   - Opposing goals to protagonist
+   - Methods and motivation
+   - Connection to main conflict
+
+3. **SUPPORTING CHARACTERS** (2-3 key characters):
+   - Names and roles in story
+   - Relationship to protagonist
+   - How they help/hinder the plot
+
+4. **CHARACTER RELATIONSHIPS**:
+   - How characters interact
+   - Key relationship dynamics
+   - How relationships evolve
+
+Ensure characters fit the genre and support the theme effectively.""",
+        description="Develops protagonist, antagonist, and supporting characters",
         output_key="character_profiles"
     )
+
+# ===== SIMPLIFIED ROOT AGENT =====
+
+def create_root_agent():
+    """Creates the root agent as a SequentialAgent with parameter extraction and writing steps."""
     
-    # Determine chapter counts based on target length
-    if target_length.lower() == "short":
-        act1_chapters, act2_chapters, act3_chapters = 4, 6, 4
-    elif target_length.lower() == "long":
-        act1_chapters, act2_chapters, act3_chapters = 8, 10, 8
-    else:  # medium
-        act1_chapters, act2_chapters, act3_chapters = 6, 8, 6
+    # Create all sub-agents
+    parameter_agent = create_parameter_extraction_agent()
+    outline_agent = create_outline_agent()
+    character_agent = create_character_agent()
+    act1_agent = create_act_agent("Act 1")
+    act2_agent = create_act_agent("Act 2") 
+    act3_agent = create_act_agent("Act 3")
     
-    # Step 3: Act 1 Agent (Setup)
-    act1_agent = create_act_writing_agent(1, "Setup", llm, act1_chapters)
-    
-    # Step 4: Act 2 Agent (Development) 
-    act2_agent = create_act_writing_agent(2, "Development", llm, act2_chapters)
-    
-    # Step 5: Act 3 Agent (Resolution)
-    act3_agent = create_act_writing_agent(3, "Resolution", llm, act3_chapters)
-    
-    # Create the Sequential Pipeline Agent
-    pipeline_agent = SequentialAgent(
-        name="NovelWritingPipeline",
-        description=f"Fixed pipeline for writing {genre} novel about {theme}",
+    # Create the sequential workflow
+    root_agent = SequentialAgent(
+        name="novel_fix_sequential_pipeline",
+        description="Complete novel writing pipeline: parameter extraction → outline → characters → Act 1 → Act 2 → Act 3",
         sub_agents=[
+            parameter_agent,
             outline_agent,
-            character_agent, 
+            character_agent,
             act1_agent,
             act2_agent,
             act3_agent
         ]
     )
     
-    return pipeline_agent
-
-def create_act_writing_agent(act_number: int, act_name: str, llm, chapter_count: int) -> SequentialAgent:
-    """Creates a Sequential Agent for writing all chapters in a specific act."""
-    
-    # Determine chapter focus based on act
-    if act_number == 1:
-        chapter_focus = "character introduction, world-building, inciting incident"
-    elif act_number == 2:
-        chapter_focus = "rising action, conflicts, character development, midpoint crisis"
-    else:  # Act 3
-        chapter_focus = "climax preparation, climax, falling action, resolution"
-    
-    # Create chapter writing agents for this act
-    chapter_agents = []
-    for chapter_num in range(1, chapter_count + 1):
-        chapter_agent = LlmAgent(
-            model=llm,
-            name=f"Act{act_number}Chapter{chapter_num}Agent",
-            instruction=f"""You are the Chapter Writing Agent for Act {act_number}, Chapter {chapter_num} of {chapter_count}.
-
-CONTEXT:
-- Act: {act_name} (Act {act_number})
-- Chapter: {chapter_num} of {chapter_count} in this act
-- Focus: {chapter_focus}
-- Outline: {{novel_outline}}
-- Characters: {{character_profiles}}
-
-Your task is to write Chapter {chapter_num} of Act {act_number}:
-
-1. Follow the outline structure for this specific chapter
-2. Use the established characters with their personalities and arcs
-3. Write 1000-1500 words of compelling narrative
-4. Include dialogue, action, and description as appropriate
-5. Advance the plot according to the act's purpose ({chapter_focus})
-6. Maintain consistency with previous chapters
-7. End with appropriate transition or hook for next chapter
-
-Chapter Requirements for Act {act_number}:
-{f"- Introduce main character and world" if act_number == 1 else ""}
-{f"- Present the inciting incident" if act_number == 1 and chapter_num >= 3 else ""}
-{f"- Develop conflicts and relationships" if act_number == 2 else ""}
-{f"- Build to midpoint crisis" if act_number == 2 and chapter_num >= chapter_count - 2 else ""}
-{f"- Prepare for climax" if act_number == 3 and chapter_num == 1 else ""}
-{f"- Present the climax" if act_number == 3 and chapter_num == 2 else ""}
-{f"- Resolve conflicts" if act_number == 3 and chapter_num >= 3 else ""}
-
-Write the complete chapter content.""",
-            description=f"Writes Chapter {chapter_num} of Act {act_number} ({act_name})",
-            output_key=f"act{act_number}_chapter{chapter_num}"
-        )
-        chapter_agents.append(chapter_agent)
-    
-    # Create Sequential Agent for this act
-    act_agent = SequentialAgent(
-        name=f"Act{act_number}Agent",
-        description=f"Writes all chapters for Act {act_number}: {act_name}",
-        sub_agents=chapter_agents
-    )
-    
-    return act_agent
-
-# ===== ROOT AGENT CREATION =====
-
-def create_root_agent():
-    """Creates the root agent for novel_fix with interactive capabilities."""
-    llm = create_llm()
-
-    return create_novel_pipeline_agent(genre, theme, target_length)
-    
-    # Pipeline Control Agent
-    pipeline_controller = Agent(
-        model=llm,
-        name="pipeline_controller",
-        instruction="""You are the Pipeline Controller for the Novel Fix system.
-
-You manage the FIXED WORKFLOW novel writing pipeline that follows this exact sequence:
-1. Outline Creation
-2. Character Development
-3. Act 1 Writing (multiple chapters)
-4. Act 2 Writing (multiple chapters) 
-5. Act 3 Writing (multiple chapters)
-
-When users want to start a fixed pipeline, use the 'run_fixed_pipeline' tool.
-When users ask about pipeline status, use the 'get_pipeline_status' tool.
-
-This is different from the dynamic novel writing system - here the workflow is predetermined and automatic.""",
-        description="Controls the fixed workflow pipeline execution",
-        tools=[run_fixed_pipeline, get_pipeline_status],
-    )
-    
-    # Root Agent that coordinates everything
-    root_agent = Agent(
-        name="novel_fix_agent",
-        model=llm,
-        description="Novel Fix - Fixed Workflow Novel Writing System: Uses predetermined sequential workflow for novel creation",
-        instruction="""You are the Novel Fix Agent - a FIXED WORKFLOW novel writing system.
-
-SYSTEM OVERVIEW:
-Unlike dynamic novel writing systems, Novel Fix uses a predetermined, sequential workflow that automatically executes in this exact order:
-
-1. **Outline Creation** - Creates comprehensive 3-act structure
-2. **Character Development** - Develops protagonist, antagonist, and supporting characters  
-3. **Act 1 Writing** - Writes all setup chapters sequentially
-4. **Act 2 Writing** - Writes all development chapters sequentially
-5. **Act 3 Writing** - Writes all resolution chapters sequentially
-
-KEY FEATURES:
-- **Predictable**: Same workflow every time
-- **Automatic**: No user guidance needed during execution
-- **Sequential**: Each step builds on the previous
-- **Complete**: Produces a full novel from start to finish
-
-WORKFLOW TYPES:
-- Short novel: 14 chapters (4+6+4)
-- Medium novel: 20 chapters (6+8+6) 
-- Long novel: 26 chapters (8+10+8)
-
-When users want to:
-- Start a new novel project → delegate to 'pipeline_controller'
-- Check pipeline status → delegate to 'pipeline_controller'
-- Learn about the system → explain the fixed workflow approach
-
-Always emphasize that this is a FIXED, AUTOMATIC workflow that requires minimal user interaction once started.""",
-        tools=[],
-        sub_agents=[pipeline_controller],
-        output_key="novel_fix_result"
-    )
-    
     return root_agent
 
 # ===== STANDALONE PIPELINE EXECUTION (for testing) =====
 
-async def create_and_run_novel(genre: str, theme: str, target_length: str = "medium"):
-    """
-    Creates and runs the complete novel writing pipeline.
-    This function executes the entire workflow automatically.
-    """
-    print(f"🚀 Starting Fixed Novel Writing Pipeline")
-    print(f"📚 Genre: {genre}")
+async def create_and_run_novel(genre: str, theme: str, target_length: str):
+    """Standalone function to create and run the complete novel pipeline."""
+    print(f"🚀 Starting Novel Fix Pipeline")
+    print(f"📖 Genre: {genre}")
     print(f"🎯 Theme: {theme}")
-    print(f"📏 Target Length: {target_length}")
+    print(f"📏 Length: {target_length}")
     print("=" * 50)
     
-    # Create the pipeline agent
-    pipeline_agent = create_novel_pipeline_agent(genre, theme, target_length)
+    # Create the root agent (which is now a SequentialAgent)
+    root_agent = create_root_agent()
     
-    # Create session
-    APP_NAME = "novel_fix_pipeline"
-    USER_ID = "writer"
-    SESSION_ID = "novel_session"
+    # Run the pipeline (in a real implementation, you'd use a Runner)
+    print("✨ Root agent created successfully!")
+    print("🎬 Ready to execute the complete novel writing workflow!")
     
-    # Setup session service
-    session_service = InMemorySessionService()
-    runner = Runner(
-        app_name=APP_NAME,
-        agent=pipeline_agent,
-        session_service=session_service
-    )
-    
-    await session_service.create_session(
-        app_name=APP_NAME,
-        user_id=USER_ID,
-        session_id=SESSION_ID
-    )
-    
-    # Start the pipeline with initial prompt
-    start_prompt = f"Write a {target_length} {genre} novel about {theme}. Follow the complete pipeline from outline to final chapter."
-    
-    print("🔄 Executing Pipeline...")
-    content = types.Content(role='user', parts=[types.Part(text=start_prompt)])
-    
-    step_count = 0
-    all_events = []
-    
-    async for event in runner.run_async(user_id=USER_ID, session_id=SESSION_ID, new_message=content):
-        all_events.append(event)
-        
-        # Show agent execution progress
-        if event.author and "Agent" in event.author:
-            step_count += 1
-            print(f"\n📝 Step {step_count}: {event.author}")
-            
-            # Show content if available
-            if event.content and event.content.parts:
-                response_text = event.content.parts[0].text
-                if len(response_text) > 150:
-                    print(f"   → {response_text[:150]}...")
-                else:
-                    print(f"   → {response_text}")
-        
-        # Only break on the final response from the root SequentialAgent
-        if event.is_final_response() and event.author == "NovelWritingPipeline":
-            if event.content and event.content.parts:
-                print(f"\n✅ Pipeline Complete!")
-                print(f"Final Output: {event.content.parts[0].text[:200]}...")
-            break
-    
-    print(f"\n🎉 Novel Writing Pipeline Completed!")
-    return runner, session_service
+    return root_agent
 
 # ===== SETUP FOR ADK WEB =====
 
-# Session setup for ADK web
-session_service = InMemorySessionService()
-
-# Create session with initial state
+# Constants for web service
 APP_NAME = "novel_fix"
 USER_ID = "writer_1"
 SESSION_ID = "novel_fix_session_001"
-
-initial_state = {
-    "pipeline_status": "not_started",
-    "pipeline_genre": None,
-    "pipeline_theme": None,
-    "pipeline_target_length": None
-}
-
-# Create the root agent
-root_agent = create_root_agent()
 
 async def call_agent_async(query: str, runner: Runner, user_id: str, session_id: str):
     """Sends a query to the agent and prints the final response."""
@@ -410,8 +385,14 @@ async def call_agent_async(query: str, runner: Runner, user_id: str, session_id:
                 print(f"<<< Agent Response: {event.content.parts[0].text}")
             break
 
+root_agent = create_root_agent()
+
 async def main():
     """Main function for ADK web integration and testing."""
+    
+    # Create session service and root agent
+    session_service = InMemorySessionService()
+
     
     runner = Runner(
         app_name=APP_NAME,
@@ -437,6 +418,15 @@ async def main():
     for query in queries:
         await call_agent_async(query, runner, USER_ID, SESSION_ID)
         await asyncio.sleep(1)  # Brief pause between queries
+
+def get_chapter_counts(target_length: str) -> dict:
+    """Returns chapter count breakdown for each act based on target length."""
+    chapter_counts = {
+        "short": {"act1": 4, "act2": 6, "act3": 4, "total": 14},
+        "medium": {"act1": 6, "act2": 8, "act3": 6, "total": 20},
+        "long": {"act1": 8, "act2": 10, "act3": 8, "total": 26}
+    }
+    return chapter_counts.get(target_length, chapter_counts["medium"])
 
 if __name__ == "__main__":
     # For standalone testing
