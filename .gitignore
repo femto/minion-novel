@@ -187,4 +187,4 @@ secrets.json
 
 # Application specific
 *.db
-*.sqlite 
+*.sqlite arch.png
