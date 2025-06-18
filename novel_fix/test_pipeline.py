@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-简单测试novel_fix流水线
+Simple test for novel_fix pipeline
 """
 import asyncio
 import sys
@@ -12,12 +12,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from novel_fix.agent import create_and_run_novel
 
 async def test_short_novel():
-    """测试创建一个短小说"""
+    """Test creating a short novel"""
     print("🧪 Testing Novel Fix Pipeline")
     print("=" * 50)
     
     try:
-        # 测试一个简短的科幻小说
+        # Test a short sci-fi novel
         await create_and_run_novel(
             genre="science fiction",
             theme="artificial intelligence and humanity",

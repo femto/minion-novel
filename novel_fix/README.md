@@ -1,76 +1,76 @@
 # Novel Fix - Fixed Workflow Novel Writing Agent
 
-基于Google ADK的**Workflow Agent**实现的固定流程小说创作系统。
+A fixed-workflow novel writing system implemented with Google ADK's **Workflow Agent**.
 
-## 🎯 设计理念
+## 🎯 Design Philosophy
 
-与`novel`目录的动态决策不同，`novel_fix`使用**固定的、预定义的工作流程**来创作小说，无需用户交互指导每一步。
+Unlike the dynamic decision-making in the `novel` directory, `novel_fix` uses a **fixed, predefined workflow** to create novels without requiring user interaction at each step.
 
-## 🔄 固定流程（使用SequentialAgent）
+## 🔄 Fixed Workflow (Using SequentialAgent)
 
-根据[ADK Workflow Agents文档](https://google.github.io/adk-docs/agents/workflow-agents/)，本系统实现以下固定执行顺序：
+Based on the [ADK Workflow Agents documentation](https://google.github.io/adk-docs/agents/workflow-agents/), this system implements the following fixed execution order:
 
-1. **📋 大纲创建** (`OutlineAgent`)
-   - 创建三幕结构
-   - 确定章节数量和结构
-   - 定义关键情节点
+1. **📋 Outline Creation** (`OutlineAgent`)
+   - Create three-act structure
+   - Determine chapter count and structure
+   - Define key plot points
 
-2. **👥 人物小传** (`CharacterAgent`) 
-   - 主角详细档案
-   - 反派角色设定
-   - 2-3个支撑角色
+2. **👥 Character Profiles** (`CharacterAgent`) 
+   - Detailed protagonist profile
+   - Antagonist character setup
+   - 2-3 supporting characters
 
-3. **📖 Act 1 写作** (`Act1Agent` - SequentialAgent)
-   - Chapter 1: 角色和世界介绍
-   - Chapter 2: 世界构建延续
-   - Chapter 3: 引发事件
-   - Chapter 4: 第一幕结束
+3. **📖 Act 1 Writing** (`Act1Agent` - SequentialAgent)
+   - Chapter 1: Character and world introduction
+   - Chapter 2: World-building continuation
+   - Chapter 3: Inciting incident
+   - Chapter 4: Act 1 conclusion
 
-4. **📖 Act 2 写作** (`Act2Agent` - SequentialAgent)
-   - Chapter 1-2: 上升行动
-   - Chapter 3-4: 冲突发展
-   - Chapter 5-6: 中点危机
+4. **📖 Act 2 Writing** (`Act2Agent` - SequentialAgent)
+   - Chapter 1-2: Rising action
+   - Chapter 3-4: Conflict development
+   - Chapter 5-6: Midpoint crisis
 
-5. **📖 Act 3 写作** (`Act3Agent` - SequentialAgent)
-   - Chapter 1: 高潮准备
-   - Chapter 2: 高潮场面
-   - Chapter 3-4: 下降行动和解决
+5. **📖 Act 3 Writing** (`Act3Agent` - SequentialAgent)
+   - Chapter 1: Climax preparation
+   - Chapter 2: Climax scene
+   - Chapter 3-4: Falling action and resolution
 
-## 🆚 与novel目录的对比
+## 🆚 Comparison with novel directory
 
-| 特性 | novel (动态) | novel_fix (固定) |
-|------|-------------|-----------------|
-| **流程控制** | LLM动态决策 | SequentialAgent固定流程 |
-| **用户交互** | 需要对话指导 | 一次输入，自动执行 |
-| **执行顺序** | 可变，依赖LLM判断 | 严格按序：大纲→人物→Act1→Act2→Act3 |
-| **可预测性** | 不确定 | 完全可预测 |
-| **适用场景** | 交互式创作 | 批量生产、自动化 |
-| **基础技术** | Sub-agents + LLM coordination | Workflow Agents (SequentialAgent) |
+| Feature | novel (dynamic) | novel_fix (fixed) |
+|---------|----------------|-------------------|
+| **Flow Control** | LLM dynamic decisions | SequentialAgent fixed workflow |
+| **User Interaction** | Requires dialogue guidance | One input, auto execution |
+| **Execution Order** | Variable, depends on LLM judgment | Strict sequence: outline→characters→Act1→Act2→Act3 |
+| **Predictability** | Uncertain | Completely predictable |
+| **Use Case** | Interactive creation | Batch production, automation |
+| **Base Technology** | Sub-agents + LLM coordination | Workflow Agents (SequentialAgent) |
 
-## 🚀 使用方法
+## 🚀 Usage Methods
 
-### 1. ADK Web 交互（推荐）
+### 1. ADK Web Interaction (Recommended)
 ```bash
 cd novel_fix
 adk web
 ```
-然后在浏览器中与Novel Fix Web Agent交互：
+Then interact with Novel Fix Web Agent in browser:
 - "What is Novel Fix and how does it work?"
 - "Start a fantasy novel about friendship and courage, medium length"
 - "Check the current pipeline status"
 
-### 2. 命令行测试
+### 2. Command Line Testing
 ```bash
 cd novel_fix
-python agent.py  # 测试root agent
-python web_agent.py  # 测试web agent
+python agent.py  # Test root agent
+python web_agent.py  # Test web agent
 ```
 
-### 3. 编程接口
+### 3. Programming Interface
 ```python
 from novel_fix.agent import create_and_run_novel
 
-# 自动执行完整小说创作流程
+# Auto-execute complete novel writing workflow
 await create_and_run_novel(
     genre="fantasy",
     theme="friendship and courage", 
@@ -78,11 +78,11 @@ await create_and_run_novel(
 )
 ```
 
-### 4. 自定义流程
+### 4. Custom Workflow
 ```python
 from novel_fix.agent import create_novel_pipeline_agent
 
-# 创建特定的流程agent
+# Create specific workflow agent
 pipeline = create_novel_pipeline_agent(
     genre="science fiction",
     theme="technological ethics",
@@ -90,52 +90,52 @@ pipeline = create_novel_pipeline_agent(
 )
 ```
 
-## 📊 支持的配置
+## 📊 Supported Configurations
 
-### 类型长度
-- **short**: ~50k words (12章: 4+4+4)
-- **medium**: ~80k words (18章: 6+6+6) 
-- **long**: ~120k words (24章: 8+8+8)
+### Length Types
+- **short**: ~50k words (14 chapters: 4+6+4)
+- **medium**: ~80k words (20 chapters: 6+8+6) 
+- **long**: ~120k words (26 chapters: 8+10+8)
 
-### 环境配置
-支持Azure OpenAI和Google Gemini：
+### Environment Configuration
+Supports Azure OpenAI and Google Gemini:
 ```env
-# Azure配置
+# Azure configuration
 USE_AZURE=true
 AZURE_MODEL_NAME=gpt-4.1
 AZURE_OPENAI_ENDPOINT=https://your-endpoint.openai.azure.com/
 AZURE_OPENAI_API_KEY=your-key
 AZURE_API_VERSION=2024-02-15-preview
 
-# Google配置  
+# Google configuration  
 USE_AZURE=false
 GOOGLE_API_KEY=your-google-key
 GOOGLE_MODEL_NAME=gemini-2.0-flash-exp
 ```
 
-## 🔧 技术实现
+## 🔧 Technical Implementation
 
-基于Google ADK的核心Workflow Agent类型：
+Based on Google ADK's core Workflow Agent types:
 
-1. **SequentialAgent**: 确保严格的执行顺序
-2. **LlmAgent**: 每个步骤的具体执行
-3. **output_key**: 在不同步骤间传递数据
+1. **SequentialAgent**: Ensures strict execution order
+2. **LlmAgent**: Specific execution for each step
+3. **output_key**: Pass data between different steps
 
-参考ADK文档：
+Reference ADK documentation:
 - [Workflow Agents](https://google.github.io/adk-docs/agents/workflow-agents/)
 - [Sequential Agents](https://google.github.io/adk-docs/agents/workflow-agents/sequential-agents/)
 
-## 💡 优势
+## 💡 Advantages
 
-1. **可预测性**: 每次运行都遵循相同流程
-2. **可靠性**: 确保任务按正确顺序执行
-3. **结构化**: 清晰的控制流程，易于调试
-4. **自动化**: 无需人工干预，适合批量处理
-5. **一致性**: 输出格式和质量更加统一
+1. **Predictability**: Same workflow followed every time
+2. **Reliability**: Ensures tasks execute in correct order
+3. **Structured**: Clear control flow, easy to debug
+4. **Automated**: No manual intervention needed, suitable for batch processing
+5. **Consistent**: More uniform output format and quality
 
-## 🎯 适用场景
+## 🎯 Use Cases
 
-- 内容工厂的批量小说生产
-- 需要标准化流程的创作
-- 教学和演示固定写作流程
-- 对比测试不同的创作方法 
+- Batch novel production for content factories
+- Standardized workflow creation needs
+- Teaching and demonstrating fixed writing processes
+- Comparative testing of different creation methods 

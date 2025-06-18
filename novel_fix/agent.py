@@ -245,6 +245,8 @@ Write the complete chapter content.""",
 def create_root_agent():
     """Creates the root agent for novel_fix with interactive capabilities."""
     llm = create_llm()
+
+    return create_novel_pipeline_agent(genre, theme, target_length)
     
     # Pipeline Control Agent
     pipeline_controller = Agent(

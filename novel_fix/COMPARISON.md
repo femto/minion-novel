@@ -1,169 +1,169 @@
-# Novel vs Novel Fix - 详细对比
+# Novel vs Novel Fix - Detailed Comparison
 
-## 📊 系统对比总览
+## 📊 System Comparison Overview
 
-| 特性 | novel (动态) | novel_fix (固定) |
-|------|-------------|-----------------|
-| **核心技术** | LLM动态决策 + Sub-agents | ADK SequentialAgent工作流 |
-| **流程控制** | 智能决策，用户引导 | 固定序列，自动执行 |
-| **用户体验** | 交互式对话 | 一键启动，自动完成 |
-| **可预测性** | 变化的，取决于LLM判断 | 完全确定的执行顺序 |
-| **适用场景** | 创意写作，个性化指导 | 批量生产，标准化流程 |
+| Feature | novel (dynamic) | novel_fix (fixed) |
+|---------|----------------|-------------------|
+| **Core Technology** | LLM dynamic decisions + Sub-agents | ADK SequentialAgent workflow |
+| **Flow Control** | Intelligent decisions, user guidance | Fixed sequence, auto execution |
+| **User Experience** | Interactive dialogue | One-click start, auto completion |
+| **Predictability** | Variable, depends on LLM judgment | Completely deterministic execution order |
+| **Use Case** | Creative writing, personalized guidance | Batch production, standardized process |
 
-## 🔧 技术架构对比
+## 🔧 Technical Architecture Comparison
 
-### Novel (动态决策系统)
+### Novel (Dynamic Decision System)
 ```python
-# 基于LLM的动态agent协调
+# LLM-based dynamic agent coordination
 root_agent = Agent(
-    instruction="智能决策下一步操作...",
+    instruction="Intelligently decide next operation...",
     sub_agents=[outline_agent, character_agent, act_agent, progress_agent]
 )
-# 用户需要通过对话引导每一步
+# Users need to guide each step through dialogue
 ```
 
-### Novel Fix (固定工作流系统)
+### Novel Fix (Fixed Workflow System)
 ```python
-# 基于SequentialAgent的固定流程
+# SequentialAgent-based fixed process
 pipeline_agent = SequentialAgent(
     sub_agents=[
-        outline_agent,      # 步骤1：大纲
-        character_agent,    # 步骤2：人物
-        act1_agent,        # 步骤3：第一幕
-        act2_agent,        # 步骤4：第二幕  
-        act3_agent         # 步骤5：第三幕
+        outline_agent,      # Step 1: Outline
+        character_agent,    # Step 2: Characters
+        act1_agent,        # Step 3: Act 1
+        act2_agent,        # Step 4: Act 2  
+        act3_agent         # Step 5: Act 3
     ]
 )
-# 自动按序执行，无需用户干预
+# Auto-executes in sequence, no user intervention needed
 ```
 
-## 🎯 使用场景对比
+## 🎯 Use Case Comparison
 
-### Novel - 适合以下场景：
-✅ **创意写作工作坊**
-- 作家需要灵感和指导
-- 每个项目都有独特需求
-- 希望与AI协作创作
+### Novel - Suitable for:
+✅ **Creative Writing Workshops**
+- Writers need inspiration and guidance
+- Each project has unique requirements
+- Desire AI collaboration in creation
 
-✅ **个性化创作辅助**
-- 根据写作习惯调整流程
-- 实时获得创作建议
-- 灵活应对创作变化
+✅ **Personalized Creation Assistance**
+- Adjust process based on writing habits
+- Get real-time creative suggestions
+- Flexibly respond to creative changes
 
-✅ **教学和学习**
-- 学习小说写作技巧
-- 理解创作过程
-- 获得即时反馈
+✅ **Teaching and Learning**
+- Learn novel writing techniques
+- Understand the creation process
+- Get instant feedback
 
-### Novel Fix - 适合以下场景：
-✅ **内容工厂/批量生产**
-- 需要大量标准化内容
-- 一致的质量和格式
-- 最小化人工干预
+### Novel Fix - Suitable for:
+✅ **Content Factory/Batch Production**
+- Need large amounts of standardized content
+- Consistent quality and format
+- Minimize manual intervention
 
-✅ **流程标准化**
-- 企业级内容生产
-- 可重复的创作流程
-- 质量控制和审核
+✅ **Process Standardization**
+- Enterprise-level content production
+- Repeatable creation workflow
+- Quality control and auditing
 
-✅ **原型验证**
-- 快速生成完整小说框架
-- 测试不同主题和类型
-- 概念验证项目
+✅ **Prototype Validation**
+- Quickly generate complete novel frameworks
+- Test different themes and genres
+- Proof-of-concept projects
 
-## 📈 性能和效率对比
+## 📈 Performance and Efficiency Comparison
 
-### 时间效率
-- **Novel**: 需要多轮对话，耗时较长
-- **Novel Fix**: 一次设置，自动完成，效率更高
+### Time Efficiency
+- **Novel**: Requires multiple dialogue rounds, more time-consuming
+- **Novel Fix**: One-time setup, auto completion, higher efficiency
 
-### 资源消耗
-- **Novel**: 需要更多LLM调用来做决策
-- **Novel Fix**: 减少决策开销，专注内容生成
+### Resource Consumption
+- **Novel**: Needs more LLM calls for decision-making
+- **Novel Fix**: Reduces decision overhead, focuses on content generation
 
-### 可扩展性
-- **Novel**: 适合小规模个性化创作
-- **Novel Fix**: 适合大规模批量处理
+### Scalability
+- **Novel**: Suitable for small-scale personalized creation
+- **Novel Fix**: Suitable for large-scale batch processing
 
-## 🔄 执行流程对比
+## 🔄 Execution Flow Comparison
 
-### Novel 执行示例
+### Novel Execution Example
 ```
-用户: "帮我写一个奇幻小说"
-Agent: "我来创建大纲..." 
-用户: "现在创建角色"
-Agent: "好的，创建角色..."
-用户: "写第一章"
-Agent: "选择章节类型..."
-[需要持续对话引导]
+User: "Help me write a fantasy novel"
+Agent: "I'll create an outline..." 
+User: "Now create characters"
+Agent: "Okay, creating characters..."
+User: "Write the first chapter"
+Agent: "Choose chapter type..."
+[Requires continuous dialogue guidance]
 ```
 
-### Novel Fix 执行示例
+### Novel Fix Execution Example
 ```
-用户: "Start a fantasy novel about friendship, medium length"
+User: "Start a fantasy novel about friendship, medium length"
 System: 
-  ✅ Step 1: OutlineAgent [自动完成]
-  ✅ Step 2: CharacterAgent [自动完成]  
-  ✅ Step 3: Act1Agent → 6章 [自动完成]
-  ✅ Step 4: Act2Agent → 8章 [自动完成]
-  ✅ Step 5: Act3Agent → 6章 [自动完成]
-[无需用户干预，自动完成]
+  ✅ Step 1: OutlineAgent [Auto completed]
+  ✅ Step 2: CharacterAgent [Auto completed]  
+  ✅ Step 3: Act1Agent → 6 chapters [Auto completed]
+  ✅ Step 4: Act2Agent → 8 chapters [Auto completed]
+  ✅ Step 5: Act3Agent → 6 chapters [Auto completed]
+[No user intervention needed, auto completes]
 ```
 
-## 🎨 创作质量对比
+## 🎨 Creative Quality Comparison
 
-### 创意和原创性
-- **Novel**: 更高的创意空间，LLM可以做出意外的创作决策
-- **Novel Fix**: 更一致的结构，但创意可能受限于预设流程
+### Creativity and Originality
+- **Novel**: Higher creative space, LLM can make unexpected creative decisions
+- **Novel Fix**: More consistent structure, but creativity may be limited by preset workflow
 
-### 结构完整性
-- **Novel**: 依赖用户和LLM的协调，可能遗漏某些环节
-- **Novel Fix**: 保证完整的三幕结构和所有章节
+### Structural Integrity
+- **Novel**: Depends on user and LLM coordination, may miss certain elements
+- **Novel Fix**: Guarantees complete three-act structure and all chapters
 
-### 主题一致性
-- **Novel**: 可能在长对话中偏离原始主题
-- **Novel Fix**: 主题在整个流程中保持一致
+### Thematic Consistency
+- **Novel**: May deviate from original theme during long conversations
+- **Novel Fix**: Theme remains consistent throughout the entire process
 
-## 🔧 开发和维护对比
+## 🔧 Development and Maintenance Comparison
 
-### 复杂度
-- **Novel**: 复杂的对话管理和状态跟踪
-- **Novel Fix**: 简单的线性流程，易于理解和调试
+### Complexity
+- **Novel**: Complex dialogue management and state tracking
+- **Novel Fix**: Simple linear process, easy to understand and debug
 
-### 调试难度
-- **Novel**: 难以预测和重现问题
-- **Novel Fix**: 问题容易定位到具体步骤
+### Debugging Difficulty
+- **Novel**: Hard to predict and reproduce issues
+- **Novel Fix**: Easy to locate problems to specific steps
 
-### 扩展性
-- **Novel**: 添加新功能需要考虑对话流程
-- **Novel Fix**: 可以轻松添加或重排序步骤
+### Extensibility
+- **Novel**: Adding new features requires considering dialogue flow
+- **Novel Fix**: Can easily add or reorder steps
 
-## 💡 选择建议
+## 💡 Selection Recommendations
 
-### 选择 Novel 如果你需要：
-- 创意写作指导和灵感
-- 个性化的创作体验  
-- 与AI协作的乐趣
-- 学习写作技巧
+### Choose Novel if you need:
+- Creative writing guidance and inspiration
+- Personalized creation experience  
+- Joy of AI collaboration
+- Learning writing techniques
 
-### 选择 Novel Fix 如果你需要：
-- 快速生成完整小说
-- 标准化的内容生产
-- 可预测的结果
-- 批量处理能力
+### Choose Novel Fix if you need:
+- Quick generation of complete novels
+- Standardized content production
+- Predictable results
+- Batch processing capabilities
 
-## 🚀 未来发展方向
+## 🚀 Future Development Directions
 
-### Novel 可以增强：
-- 更智能的对话理解
-- 更好的创作建议算法
-- 个性化学习能力
+### Novel can be enhanced with:
+- Smarter dialogue understanding
+- Better creative suggestion algorithms
+- Personalized learning capabilities
 
-### Novel Fix 可以增强：
-- 更多预设工作流模板
-- 并行处理能力（Parallel Agents）
-- 条件分支逻辑（Loop Agents）
+### Novel Fix can be enhanced with:
+- More preset workflow templates
+- Parallel processing capabilities (Parallel Agents)
+- Conditional branching logic (Loop Agents)
 
 ---
 
-两个系统各有优势，选择取决于你的具体需求和使用场景。Novel适合创意和个性化，Novel Fix适合效率和标准化。 
+Both systems have their advantages. Choose based on your specific needs and use cases. Novel is suitable for creativity and personalization, Novel Fix is suitable for efficiency and standardization. 

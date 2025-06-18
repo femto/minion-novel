@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Novel Fix Web Agent - 专门用于ADK Web服务的agent
+Novel Fix Web Agent - Dedicated agent for ADK Web service
 """
 import os
 import asyncio
