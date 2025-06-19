@@ -12,7 +12,7 @@ short_description: minion-adk
 license: mit
 ---
 
-# Simple ADK Calculator Agent
+# Simple ADK Agent
 
 # Note
 
@@ -61,16 +61,4 @@ python test_calculator.py
 
 ## Example Prompts
 
-Try asking the agent:
-- What is 5 plus 3?
-- Can you multiply 7 and 6?
-- Divide 10 by 2 please
-- What is 15 minus 7?
-
 ## Agent Capabilities
-
-This calculator agent can:
-- Add two numbers
-- Subtract two numbers
-- Multiply two numbers
-- Divide two numbers (with error handling for division by zero)
