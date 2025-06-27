@@ -1,5 +1,5 @@
 ---
-title: Minion Adk
+title: Minion Novel
 emoji: 🚀
 colorFrom: red
 colorTo: yellow
