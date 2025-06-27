@@ -4,3 +4,4 @@ asyncio
 typing
 google-generativeai
 litellm
+tavily-python

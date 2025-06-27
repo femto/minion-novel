@@ -62,3 +62,62 @@ python test_calculator.py
 ## Example Prompts
 
 ## Agent Capabilities
+
+This project includes several specialized agents:
+
+### Novel Agent (`novel/`)
+- Creates detailed novel outlines based on genre, theme, and target length
+- Generates comprehensive character profiles with background and motivations
+- Supports both Azure OpenAI and Google AI models
+- Tracks novel writing progress and chapter completion
+
+### Novel Fix Agent (`novel_fix/`)
+- Fixed pipeline for systematic novel writing
+- Sequential agent workflow: parameter extraction → outline → characters → acts
+- Automated chapter generation for 3-act story structure
+- Optimized for consistent novel production
+
+### Deep Research Agent (`deep_research/`)
+- Conducts comprehensive research on any topic using real web search
+- Intelligent query generation and Tavily API integration for current web data
+- Smart filtering and ranking of research results with LLM-powered summarization
+- Generates professional research reports with proper citations
+- Tracks research progress through systematic workflow
+
+## Running Individual Agents
+
+### Novel Agent
+```bash
+cd novel
+python agent.py
+```
+
+### Novel Fix Agent  
+```bash
+cd novel_fix
+python agent.py
+```
+
+### Deep Research Agent
+```bash
+cd deep_research
+python agent.py
+```
+
+## Testing Agents
+
+Each agent includes comprehensive test suites:
+
+```bash
+# Test novel agent
+cd novel
+python test_interpolation.py
+
+# Test novel fix pipeline
+cd novel_fix
+python test_pipeline.py
+
+# Test deep research agent
+cd deep_research
+python test_research.py
+```
