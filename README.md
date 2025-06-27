@@ -49,14 +49,8 @@ Then open the URL provided (usually http://localhost:8000) in your browser and s
 
 Run the following command:
 ```
-adk run simple_adk_agent
-```
-
-### 3. Using the Test Script
-
-Run the test script to see some example interactions:
-```
-python test_calculator.py
+adk run novel_fix
+adk run deep_research
 ```
 
 ## Example Prompts
